@@ -1,0 +1,38 @@
+package com.gym.management.dto.request.admin;
+
+import lombok.Data;
+import jakarta.validation.constraints.*;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Data
+public class EquipmentCreateRequest {
+
+    @NotNull(message = "门店ID不能为空")
+    private Integer storeId;
+
+    @NotBlank(message = "器械名称不能为空")
+    @Size(max = 100, message = "器械名称最多100字符")
+    private String equipmentName;
+
+    @NotBlank(message = "器械类型不能为空")
+    private String equipmentType;
+
+    private String brand;
+    private String model;
+
+    private LocalDate purchaseDate;
+
+    @DecimalMin(value = "0.00", message = "购买价格不能为负数")
+    private BigDecimal purchasePrice;
+
+    @Size(max = 100, message = "放置位置最多100字符")
+    private String location;
+
+    private Integer status = 1;
+
+    private LocalDate nextMaintenanceDate;
+
+    @Size(max = 500, message = "备注最多500字符")
+    private String remark;
+}

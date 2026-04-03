@@ -1,0 +1,368 @@
+健身房管理系统 API 文档
+版本：v1.0
+基础地址：{{baseURL}} (请替换为实际服务器地址，如 http://localhost:8080)
+认证方式：Bearer Token (登录后在 Header 中携带 Authorization: Bearer <token>)
+
+================================================================================
+一、认证模块 (Auth)
+================================================================================
+
+1. 用户登录
+   接口地址：/api/auth/login
+   请求方式：POST
+   描述：获取访问令牌 (Token)
+   
+   请求参数 (Body):
+   {
+     "account": "hunter",      // 账号
+     "password": "123456"      // 密码
+   }
+   
+   响应说明：
+   成功时返回 data.token，后续请求需在 Header 中携带该 Token。
+
+================================================================================
+二、管理员管理 (Admins)
+================================================================================
+
+1. 获取管理员列表
+   接口地址：/api/admins
+   请求方式：GET
+   
+2. 获取管理员详情
+   接口地址：/api/admins/{id}
+   请求方式：GET
+   路径参数：id (管理员ID，示例中为 4)
+
+3. 新增管理员
+   接口地址：/api/admins
+   请求方式：POST
+   请求参数 (Body):
+   {
+     "username": "hunter",
+     "password": "123456",
+     "realName": "普通管理员",
+     "roleId": 2,
+     "storeId": 2,
+     "phone": "13800138089",
+     "email": "test@gym.com"
+   }
+
+4. 编辑管理员
+   接口地址：/api/admins/{id}
+   请求方式：PUT
+   路径参数：id (管理员ID，示例中为 4)
+   请求参数 (Body):
+   {
+     "id": 4,
+     "realName": "李四修",
+     "roleId": 2,
+     "storeId": 1,
+     "phone": "13800138001",
+     "email": "zhangsan_new@gym.com"
+   }
+   *注：虽然路径中有ID，但示例Body中也包含了id字段，请以实际后端要求为准。
+
+5. 删除管理员
+   接口地址：/api/admins/{id}
+   请求方式：DELETE
+   路径参数：id (管理员ID，示例中为 6)
+
+================================================================================
+三、会员管理 (Members)
+================================================================================
+
+1. 获取会员列表
+   接口地址：/api/members
+   请求方式：GET
+   查询参数：
+   - page: 页码 (默认1)
+   - size: 每页数量 (默认10)
+   - status: 会员状态
+
+2. 获取会员详情
+   接口地址：/api/members/{id}
+   请求方式：GET
+   路径参数：id (会员ID)
+
+3. 新增会员
+   接口地址：/api/members
+   请求方式：POST
+   请求参数 (Body):
+   {
+     "realName": "张三测试5",
+     "phone": "13800138094",
+     "gender": 1,             // 1:男, 2:女
+     "idCard": "110101199001011234",
+     "registerStoreId": 1,
+     "remark": "Postman 自动化测试创建",
+     "joinDate": "2025-09-08",
+     "cardType": "period"     // 卡类型
+   }
+
+4. 编辑会员
+   接口地址：/api/members/{id}
+   请求方式：PUT
+   路径参数：id (会员ID)
+   请求参数 (Body):
+   {
+     "realName": "张三修改",
+     "phone": "13800138099",
+     "gender": 2,
+     "remark": "Postman 测试修改备注"
+   }
+
+5. 删除会员
+   接口地址：/api/members/{id}
+   请求方式：DELETE
+   路径参数：id (会员ID)
+
+6. 会员签到
+   接口地址：/api/members/{id}/check-in
+   请求方式：POST
+   路径参数：id (会员ID)
+   请求参数 (Body):
+   {
+     "memberId": 1,
+     "storeId": 1,
+     "checkInMethod": "qrcode", // 签到方式
+     "remark": "前台扫码签到"
+   }
+
+================================================================================
+四、员工管理 (Employees)
+================================================================================
+
+1. 获取员工列表
+   接口地址：/api/employees
+   请求方式：GET
+   查询参数：page, size, storeId, employeeNo, realName, department, position, status
+
+2. 获取员工详情
+   接口地址：/api/employees/{id}
+   请求方式：GET
+
+3. 新增员工
+   接口地址：/api/employees
+   请求方式：POST
+   请求参数 (Body):
+   {
+     "storeId": 1,
+     "employeeNo": "EMP20260322003",
+     "realName": "王五",
+     "gender": 1,
+     "phone": "13800138056",
+     "email": "zhangsan@gym.com",
+     "department": "前台",
+     "position": "前台主管",
+     "entryDate": "2026-03-22",
+     "baseSalary": 5000.00,
+     "remark": "新员工入职"
+   }
+
+4. 编辑员工
+   接口地址：/api/employees/{id}
+   请求方式：PUT
+   请求参数 (Body):
+   {
+     "realName": "张三丰",
+     "phone": "13900139000",
+     "position": "店长"
+   }
+
+5. 删除员工
+   接口地址：/api/employees/{id}
+   请求方式：DELETE
+
+================================================================================
+五、器械管理 (Equipments)
+================================================================================
+
+1. 获取器械列表
+   接口地址：/api/equipments
+   请求方式：GET
+   查询参数：page, size, storeId, equipmentNo, equipmentName, equipmentType, brand, status
+
+2. 获取器械详情
+   接口地址：/api/equipments/{id}
+   请求方式：GET
+
+3. 新增器械
+   接口地址：/api/equipments
+   请求方式：POST
+   请求参数 (Body):
+   {
+     "storeId": 2,
+     "equipmentName": "动感单车 S9",
+     "equipmentType": "有氧器械",
+     "brand": "英派斯",
+     "model": "S9-LUX",
+     "purchaseDate": "2024-03-20",
+     "purchasePrice": 6800.00,
+     "location": "二楼动感单车房 05号",
+     "status": 1,
+     "nextMaintenanceDate": "2025-04-01",
+     "remark": "商用级动感单车，带智能阻力调节"
+   }
+
+4. 编辑器械
+   接口地址：/api/equipments/{id}
+   请求方式：PUT
+   请求参数 (Body):
+   {
+     "equipmentName": "商用跑步机 X5 升级版",
+     "location": "二楼有氧区 B02",
+     "status": 2,
+     "lastMaintenanceDate": "2024-12-01",
+     "nextMaintenanceDate": "2025-06-01",
+     "remark": "已升级固件，定期保养"
+   }
+
+5. 删除器械
+   接口地址：/api/equipments/{id}
+   请求方式：DELETE
+
+6. 器械报修
+   接口地址：/api/equipments/maintenances
+   请求方式：POST
+   请求参数 (Body):
+   {
+     "storeId": 1,
+     "equipmentId": 1,
+     "maintenanceType": "故障",
+     "maintenanceDate": "2025-01-02",
+     "maintenanceStaff": "张三",
+     "maintenanceCost": 500.00,
+     "description": "电机异响，需要更换零件",
+     "status": 1
+   }
+
+================================================================================
+六、课程管理 (Courses)
+================================================================================
+
+1. 获取课程列表
+   接口地址：/api/courses
+   请求方式：GET
+
+2. 获取课程详情
+   接口地址：/api/courses/{id}
+   请求方式：GET
+
+3. 新增课程
+   接口地址：/api/courses
+   请求方式：POST
+   请求参数 (Body):
+   {
+     "storeId": 1,
+     "coachId": 1,
+     "courseName": "燃脂搏击",
+     "courseType": "拳击",
+     "courseLevel": "intermediate",
+     "maxSeats": 15,
+     "startTime": "2026-03-30T10:00:00",
+     "endTime": "2026-03-30T11:00:00",
+     "durationMinutes": 60,
+     "price": 129.00,
+     "room": "搏击训练区A",
+     "status": 1,
+     "remark": "高强度燃脂课程，建议有一定运动基础"
+   }
+
+4. 编辑课程
+   接口地址：/api/courses/{id}
+   请求方式：PUT
+   请求参数 (Body):
+   {
+     "courseName": "燃脂搏击 (升级版)",
+     "maxSeats": 15,
+     "price": 129.00,
+     "room": "搏击训练区 B",
+     "remark": "升级课程，增加实战环节"
+   }
+
+5. 删除课程
+   接口地址：/api/courses/{id}
+   请求方式：DELETE
+
+================================================================================
+七、教练预约管理 (Reservations)
+*注：原文件中该模块部分接口细节缺失，以下为基于命名的推断*
+================================================================================
+
+1. 获取预约列表
+   接口地址：/api/reservations (推断)
+   请求方式：GET
+
+2. 获取预约详情
+   接口地址：/api/reservations/{id} (推断)
+   请求方式：GET
+
+3. 确认预约
+   接口地址：/api/reservations/{id}/confirm (推断)
+   请求方式：POST/GET (原文件标记为GET，建议确认为POST)
+
+4. 完成预约
+   接口地址：/api/reservations/{id}/complete (推断)
+   请求方式：POST/GET
+
+5. 标记爽约
+   接口地址：/api/reservations/{id}/no-show (推断)
+   请求方式：POST/GET
+
+================================================================================
+八、公告管理 (Announcements)
+================================================================================
+
+1. 获取公告列表
+   接口地址：/api/admin/announcements
+   请求方式：GET
+
+2. 获取公告详情
+   接口地址：/api/admin/announcements/{id}
+   请求方式：GET
+
+3. 新增公告
+   接口地址：/api/admin/announcements
+   请求方式：POST
+   请求参数 (Body):
+   {
+     "storeId": null,         // null表示全站公告
+     "title": "夏季新课表正式上线",
+     "content": "亲爱的会员朋友们：...",
+     "publishType": "single",
+     "priority": 2,
+     "publishStatus": 1,
+     "publishTime": null,
+     "expireTime": "2026-04-30T23:59:59"
+   }
+
+4. 修改公告
+   接口地址：/api/admin/announcements/{id}
+   请求方式：PUT
+   请求参数 (Body):
+   {
+     "title": "2025 年春节放假通知（更新）",
+     "priority": 2,
+     "expireTime": "2025-02-10T23:59:59"
+   }
+
+5. 删除公告
+   接口地址：/api/admin/announcements/{id}
+   请求方式：DELETE
+
+================================================================================
+九、分析与报告 (Reports)
+================================================================================
+
+1. 会员统计
+   接口地址：/api/reports/members (推断)
+   请求方式：GET
+
+2. 收入统计
+   接口地址：/api/reports/revenue (推断)
+   请求方式：GET
+
+3. 考勤统计
+   接口地址：/api/reports/attendance (推断)
+   请求方式：GET

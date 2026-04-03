@@ -1,0 +1,506 @@
+use gym_management;
+-- ==================== 1. 门店表 ====================
+CREATE TABLE `stores` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '门店ID',
+    `store_name` VARCHAR(100) NOT NULL COMMENT '门店名称',
+    `store_code` VARCHAR(50) UNIQUE NOT NULL COMMENT '门店编码',
+    `province` VARCHAR(50) COMMENT '省份',
+    `city` VARCHAR(50) COMMENT '城市',
+    `district` VARCHAR(50) COMMENT '区域',
+    `address` VARCHAR(255) COMMENT '详细地址',
+    `phone` VARCHAR(20) COMMENT '联系电话',
+    `manager_name` VARCHAR(50) COMMENT '店长姓名',
+    `manager_phone` VARCHAR(20) COMMENT '店长电话',
+    `open_time` TIME COMMENT '营业时间-开始',
+    `close_time` TIME COMMENT '营业时间-结束',
+    `status` TINYINT DEFAULT 1 COMMENT '1营业 0停业 2装修中',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='门店表';
+
+-- ==================== 2. 角色表 ====================
+CREATE TABLE `roles` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '角色ID',
+    `role_name` VARCHAR(50) NOT NULL UNIQUE COMMENT '角色名称',
+    `role_code` VARCHAR(50) NOT NULL UNIQUE COMMENT '角色编码：super_admin/store_admin',
+    `description` VARCHAR(255) COMMENT '角色描述',
+    `status` TINYINT DEFAULT 1 COMMENT '1启用 0禁用',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色表';
+
+INSERT INTO `roles` (`role_name`, `role_code`, `description`) VALUES
+('超级管理员', 'super_admin', '可管理所有门店和系统配置'),
+('门店管理员', 'store_admin', '仅管理本门店日常运营');
+
+-- ==================== 3. 权限表 ====================
+CREATE TABLE `permissions` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '权限ID',
+    `permission_name` VARCHAR(100) NOT NULL COMMENT '权限名称',
+    `permission_code` VARCHAR(100) NOT NULL UNIQUE COMMENT '权限编码',
+    `module` VARCHAR(50) NOT NULL COMMENT '所属模块',
+    `description` VARCHAR(255) COMMENT '权限描述',
+    `status` TINYINT DEFAULT 1 COMMENT '1启用 0禁用',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='权限表';
+
+-- 初始化权限
+INSERT INTO `permissions` (`permission_name`, `permission_code`, `module`, `description`) VALUES
+('查看管理员', 'admin:view', 'admin', '查看管理员列表'),
+('新增管理员', 'admin:create', 'admin', '新增管理员账号'),
+('编辑管理员', 'admin:update', 'admin', '编辑管理员信息'),
+('删除管理员', 'admin:delete', 'admin', '删除管理员账号'),
+('查看会员', 'member:view', 'member', '查看会员列表'),
+('新增会员', 'member:create', 'member', '新增会员'),
+('编辑会员', 'member:update', 'member', '编辑会员信息'),
+('删除会员', 'member:delete', 'member', '删除会员'),
+('会员签到', 'member:checkin', 'member', '会员到店签到'),
+('查看员工', 'employee:view', 'employee', '查看员工列表'),
+('新增员工', 'employee:create', 'employee', '新增员工'),
+('编辑员工', 'employee:update', 'employee', '编辑员工信息'),
+('删除员工', 'employee:delete', 'employee', '删除员工'),
+('员工考勤', 'employee:attendance', 'employee', '员工签到签退'),
+('查看教练', 'coach:view', 'coach', '查看教练列表'),
+('新增教练', 'coach:create', 'coach', '新增教练'),
+('编辑教练', 'coach:update', 'coach', '编辑教练信息'),
+('查看器械', 'equipment:view', 'equipment', '查看器械列表'),
+('新增器械', 'equipment:create', 'equipment', '新增器械'),
+('编辑器械', 'equipment:update', 'equipment', '编辑器械信息'),
+('查看课程', 'course:view', 'course', '查看课程列表'),
+('新增课程', 'course:create', 'course', '新增课程'),
+('编辑课程', 'course:update', 'course', '编辑课程信息'),
+('查看预约', 'appointment:view', 'appointment', '查看预约列表'),
+('确认预约', 'appointment:confirm', 'appointment', '确认预约'),
+('查看公告', 'announcement:view', 'announcement', '查看公告列表'),
+('发布公告', 'announcement:create', 'announcement', '发布公告'),
+('查看报表', 'report:view', 'report', '查看分析报表'),
+('查看全部门店报表', 'report:all_stores', 'report', '超级管理员查看全部门店对比'),
+('导出报表', 'report:export', 'report', '导出报表数据');
+
+-- ==================== 4. 管理员表 ====================
+CREATE TABLE `admins` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '管理员ID',
+    `username` VARCHAR(50) NOT NULL UNIQUE COMMENT '登录账号',
+    `password_hash` VARCHAR(255) NOT NULL COMMENT '密码哈希',
+    `real_name` VARCHAR(50) COMMENT '真实姓名',
+    `role_id` INT NOT NULL COMMENT '角色ID',
+    `store_id` INT DEFAULT NULL COMMENT '所属门店ID（超级管理员为NULL）',
+    `phone` VARCHAR(20) COMMENT '联系电话',
+    `email` VARCHAR(100) COMMENT '邮箱',
+    `status` TINYINT DEFAULT 1 COMMENT '1正常 0禁用',
+    `last_login_at` DATETIME COMMENT '最后登录时间',
+    `last_login_ip` VARCHAR(50) COMMENT '最后登录IP',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (`role_id`) REFERENCES `roles`(`id`),
+    INDEX `idx_store_id` (`store_id`),
+    INDEX `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='管理员表';
+
+-- ==================== 5. 角色权限关联表 ====================
+CREATE TABLE `role_permissions` (
+    `role_id` INT NOT NULL COMMENT '角色ID',
+    `permission_id` INT NOT NULL COMMENT '权限ID',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`role_id`, `permission_id`),
+    FOREIGN KEY (`role_id`) REFERENCES `roles`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`permission_id`) REFERENCES `permissions`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色权限关联表';
+
+-- 超级管理员拥有所有权限
+INSERT INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT 1, `id` FROM `permissions`;
+
+-- 门店管理员权限（排除跨店权限）
+INSERT INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT 2, `id` FROM `permissions`
+WHERE `permission_code` NOT IN ('admin:create', 'admin:delete', 'report:all_stores');
+
+-- ==================== 6. 会员表 ====================
+CREATE TABLE `members` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '会员ID',
+    `member_no` VARCHAR(50) UNIQUE NOT NULL COMMENT '会员卡号（全系统唯一）',
+    `real_name` VARCHAR(50) NOT NULL COMMENT '真实姓名',
+    `gender` TINYINT DEFAULT 0 COMMENT '性别：0未知 1男 2女',
+    `phone` VARCHAR(20) NOT NULL COMMENT '联系电话',
+    `email` VARCHAR(100) COMMENT '邮箱',
+    `birthday` DATE COMMENT '出生日期',
+    `register_store_id` INT COMMENT '注册门店ID（首次办卡门店）',
+    `join_date` DATE NOT NULL COMMENT '入会日期',
+    `expire_date` DATE COMMENT '会员到期日期',members
+    `card_type` VARCHAR(20) DEFAULT 'period' COMMENT '卡类型：period(期限卡)/times(次卡)/vip(贵宾卡)',
+    `total_times` INT DEFAULT 0 COMMENT '总次数（次卡用）',
+    `remaining_times` INT DEFAULT 0 COMMENT '剩余次数（次卡用）',
+    `balance` DECIMAL(10,2) DEFAULT 0 COMMENT '账户余额',
+    `total_consumption` DECIMAL(10,2) DEFAULT 0 COMMENT '累计消费金额',
+    `visit_count` INT DEFAULT 0 COMMENT '总到店次数',
+    `last_visit_at` DATETIME COMMENT '最后到店时间',
+    `last_visit_store_id` INT COMMENT '最后到店门店ID',
+    `status` TINYINT DEFAULT 1 COMMENT '1正常 0过期 2冻结',
+    `remark` TEXT COMMENT '备注',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (`register_store_id`) REFERENCES `stores`(`id`),
+    FOREIGN KEY (`last_visit_store_id`) REFERENCES `stores`(`id`),
+    INDEX `idx_member_no` (`member_no`),
+    INDEX `idx_phone` (`phone`),
+    INDEX `idx_expire_date` (`expire_date`),
+    INDEX `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='会员表';
+
+-- ==================== 7. 会员到店记录表（简化：只记人次）====================
+CREATE TABLE `member_visits` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '到店记录ID',
+    `member_id` INT NOT NULL COMMENT '会员ID',
+    `store_id` INT NOT NULL COMMENT '到店门店ID',
+    `visit_date` DATE NOT NULL COMMENT '到店日期',
+    `check_in_time` DATETIME NOT NULL COMMENT '签到时间',
+    `check_in_method` VARCHAR(20) DEFAULT 'manual' COMMENT '签到方式：manual(手动)/card(刷卡)/qrcode(二维码)/face(人脸)/device(设备)',
+    `card_type` VARCHAR(20) DEFAULT 'period' COMMENT '当时卡类型：period/times/vip',
+    `deduct_times` INT DEFAULT 0 COMMENT '扣除次数（次卡用，期限卡为0）',
+    `related_appointment_id` INT DEFAULT NULL COMMENT '关联预约ID（有私教预约则填）',
+    `related_course_id` INT DEFAULT NULL COMMENT '关联课程ID（有团课预约则填）',
+    `staff_id` INT DEFAULT NULL COMMENT '登记员工ID',
+    `remark` TEXT COMMENT '备注',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    FOREIGN KEY (`member_id`) REFERENCES `members`(`id`),
+    FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`),
+    FOREIGN KEY (`related_appointment_id`) REFERENCES `appointments`(`id`),
+    FOREIGN KEY (`related_course_id`) REFERENCES `courses`(`id`),
+    FOREIGN KEY (`staff_id`) REFERENCES `employees`(`id`),
+    INDEX `idx_member_date` (`member_id`, `visit_date`),
+    INDEX `idx_store_date` (`store_id`, `visit_date`),
+    INDEX `idx_visit_date` (`visit_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='会员到店记录表';
+
+-- ==================== 8. 员工表 ====================
+CREATE TABLE `employees` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '员工ID',
+    `store_id` INT NOT NULL COMMENT '所属门店ID',
+    `employee_no` VARCHAR(50) UNIQUE NOT NULL COMMENT '员工工号',
+    `real_name` VARCHAR(50) NOT NULL COMMENT '真实姓名',
+    `gender` TINYINT DEFAULT 0 COMMENT '性别：0未知 1男 2女',
+    `phone` VARCHAR(20) NOT NULL COMMENT '联系电话',
+    `email` VARCHAR(100) COMMENT '邮箱',
+    `department` VARCHAR(50) COMMENT '部门：前台/销售/后勤/管理',
+    `position` VARCHAR(50) COMMENT '职位',
+    `entry_date` DATE NOT NULL COMMENT '入职日期',
+    `leave_date` DATE COMMENT '离职日期',
+    `base_salary` DECIMAL(10,2) COMMENT '基本工资',
+    `status` TINYINT DEFAULT 1 COMMENT '1在职 0离职 2休假',
+    `remark` TEXT COMMENT '备注',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`),
+    INDEX `idx_store_status` (`store_id`, `status`),
+    INDEX `idx_employee_no` (`employee_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='员工表';
+
+-- ==================== 9. 员工考勤表（签到+签退）====================
+CREATE TABLE `employee_attendances` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '考勤ID',
+    `store_id` INT NOT NULL COMMENT '所属门店ID',
+    `employee_id` INT NOT NULL COMMENT '员工ID',
+    `attendance_date` DATE NOT NULL COMMENT '考勤日期',
+    `check_in_time` DATETIME COMMENT '签到时间',
+    `check_in_method` VARCHAR(20) DEFAULT 'manual' COMMENT '签到方式：manual/card/qrcode/face',
+    `check_out_time` DATETIME COMMENT '签退时间',
+    `check_out_method` VARCHAR(20) DEFAULT 'manual' COMMENT '签退方式：manual/card/qrcode/face',
+    `work_hours` DECIMAL(5,2) DEFAULT 0 COMMENT '工作时长（小时）',
+    `status` TINYINT DEFAULT 1 COMMENT '1正常 2迟到 3早退 4缺勤 5请假',
+    `leave_type` VARCHAR(20) COMMENT '请假类型：事假/病假/年假',
+    `remark` TEXT COMMENT '备注',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`),
+    FOREIGN KEY (`employee_id`) REFERENCES `employees`(`id`),
+    UNIQUE KEY `uk_employee_date` (`employee_id`, `attendance_date`),
+    INDEX `idx_store_date` (`store_id`, `attendance_date`),
+    INDEX `idx_employee_date` (`employee_id`, `attendance_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='员工考勤表';
+
+-- ==================== 10. 教练表 ====================
+CREATE TABLE `coaches` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '教练ID',
+    `coach_no` VARCHAR(50) UNIQUE NOT NULL COMMENT '教练工号',
+    `real_name` VARCHAR(50) NOT NULL COMMENT '真实姓名',
+    `gender` TINYINT DEFAULT 0 COMMENT '性别：0未知 1男 2女',
+    `phone` VARCHAR(20) NOT NULL COMMENT '联系电话',
+    `email` VARCHAR(100) COMMENT '邮箱',
+    `coach_type` VARCHAR(20) DEFAULT 'store' COMMENT '教练类型：store(门店专属)/free(自由教练)',
+    `store_id` INT DEFAULT NULL COMMENT '所属门店ID（门店专属教练必填）',
+    `specialty` VARCHAR(100) COMMENT '专长：瑜伽/力量/有氧/拳击/拉伸',
+    `level` VARCHAR(20) DEFAULT 'junior' COMMENT '教练等级：junior/middle/senior',
+    `hourly_rate` DECIMAL(10,2) COMMENT '课时费（元/小时）',
+    `introduction` TEXT COMMENT '个人介绍',
+    `total_sessions` INT DEFAULT 0 COMMENT '累计上课次数',
+    `status` TINYINT DEFAULT 1 COMMENT '1在职 0离职 2休假',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`),
+    INDEX `idx_coach_type` (`coach_type`),
+    INDEX `idx_store_id` (`store_id`),
+    INDEX `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教练表';
+
+-- ==================== 11. 教练预约表（上课签到+签退）====================
+CREATE TABLE `appointments` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '预约ID',
+    `store_id` INT NOT NULL COMMENT '预约门店ID',
+    `appointment_no` VARCHAR(50) UNIQUE NOT NULL COMMENT '预约单号',
+    `member_id` INT NOT NULL COMMENT '会员ID',
+    `coach_id` INT NOT NULL COMMENT '教练ID',
+    `time_slot_start` DATETIME NOT NULL COMMENT '预约开始时间',
+    `time_slot_end` DATETIME NOT NULL COMMENT '预约结束时间',
+    `duration_minutes` INT COMMENT '预约时长（分钟）',
+    `price` DECIMAL(10,2) COMMENT '预约价格',
+    `coach_share` DECIMAL(10,2) DEFAULT 0 COMMENT '教练分成',
+    `purpose` VARCHAR(100) COMMENT '预约目的：减脂/增肌/康复/体态矫正',
+    `status` TINYINT DEFAULT 0 COMMENT '0待确认 1已确认 2已完成 3已取消 4已爽约',
+    `coach_check_in_time` DATETIME COMMENT '教练签到时间',
+    `coach_check_out_time` DATETIME COMMENT '教练签退时间',
+    `actual_duration` INT COMMENT '实际上课时长（分钟）',
+    `member_check_in_time` DATETIME COMMENT '会员签到时间',
+    `feedback_score` TINYINT COMMENT '评价评分1-5',
+    `feedback_content` TEXT COMMENT '评价内容',
+    `remark` TEXT COMMENT '备注',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`),
+    FOREIGN KEY (`member_id`) REFERENCES `members`(`id`),
+    FOREIGN KEY (`coach_id`) REFERENCES `coaches`(`id`),
+    INDEX `idx_coach_time` (`coach_id`, `time_slot_start`),
+    INDEX `idx_store_time` (`store_id`, `time_slot_start`),
+    INDEX `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教练预约表';
+
+-- ==================== 12. 课程表 ====================
+CREATE TABLE `courses` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '课程ID',
+    `store_id` INT NOT NULL COMMENT '所属门店ID',
+    `coach_id` INT COMMENT '授课教练ID',
+    `course_name` VARCHAR(100) NOT NULL COMMENT '课程名称',
+    `course_type` VARCHAR(50) NOT NULL COMMENT '课程类型：瑜伽/动感单车/搏击/舞蹈/力量',
+    `course_level` VARCHAR(20) DEFAULT 'beginner' COMMENT '课程难度',
+    `max_seats` INT DEFAULT 20 COMMENT '最大人数',
+    `booked_seats` INT DEFAULT 0 COMMENT '已预约人数',
+    `start_time` DATETIME NOT NULL COMMENT '开始时间',
+    `end_time` DATETIME NOT NULL COMMENT '结束时间',
+    `duration_minutes` INT COMMENT '课程时长（分钟）',
+    `price` DECIMAL(10,2) DEFAULT 0 COMMENT '课程价格',
+    `room` VARCHAR(50) COMMENT '教室/场地',
+    `status` TINYINT DEFAULT 1 COMMENT '1可预约 0已满 2取消 3进行中 4已结束',
+    `remark` TEXT COMMENT '备注',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`),
+    FOREIGN KEY (`coach_id`) REFERENCES `coaches`(`id`),
+    INDEX `idx_store_time` (`store_id`, `start_time`),
+    INDEX `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程表';
+
+-- ==================== 13. 课程报名表（会员签到+签退）====================
+CREATE TABLE `course_bookings` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '报名ID',
+    `store_id` INT NOT NULL COMMENT '上课门店ID',
+    `booking_no` VARCHAR(50) UNIQUE NOT NULL COMMENT '报名单号',
+    `member_id` INT NOT NULL COMMENT '会员ID',
+    `course_id` INT NOT NULL COMMENT '课程ID',
+    `price` DECIMAL(10,2) COMMENT '报名价格',
+    `coach_share` DECIMAL(10,2) DEFAULT 0 COMMENT '教练分成',
+    `status` TINYINT DEFAULT 0 COMMENT '0待确认 1已确认 2已完成 3已取消 4已爽约',
+    `member_check_in_time` DATETIME COMMENT '会员签到时间',
+    `member_check_out_time` DATETIME COMMENT '会员签退时间',
+    `actual_attend_minutes` INT COMMENT '实际出勤时长（分钟）',
+    `feedback_score` TINYINT COMMENT '评价评分1-5',
+    `feedback_content` TEXT COMMENT '评价内容',
+    `remark` TEXT COMMENT '备注',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`),
+    FOREIGN KEY (`member_id`) REFERENCES `members`(`id`),
+    FOREIGN KEY (`course_id`) REFERENCES `courses`(`id`),
+    INDEX `idx_member_status` (`member_id`, `status`),
+    INDEX `idx_course_status` (`course_id`, `status`),
+    INDEX `idx_store_date` (`store_id`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程报名表';
+
+-- ==================== 14. 器械表 ====================
+CREATE TABLE `equipments` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '器械ID',
+    `store_id` INT NOT NULL COMMENT '所属门店ID',
+    `equipment_no` VARCHAR(50) UNIQUE NOT NULL COMMENT '器械编号',
+    `equipment_name` VARCHAR(100) NOT NULL COMMENT '器械名称',
+    `equipment_type` VARCHAR(50) NOT NULL COMMENT '器械类型',
+    `brand` VARCHAR(50) COMMENT '品牌',
+    `model` VARCHAR(50) COMMENT '型号',
+    `purchase_date` DATE COMMENT '购买日期',
+    `purchase_price` DECIMAL(10,2) COMMENT '购买价格',
+    `location` VARCHAR(100) COMMENT '放置位置',
+    `status` TINYINT DEFAULT 1 COMMENT '1正常 2使用中 3维修中 4报废',
+    `last_maintenance_date` DATE COMMENT '最后维护日期',
+    `next_maintenance_date` DATE COMMENT '下次维护日期',
+    `remark` TEXT COMMENT '备注',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`),
+    INDEX `idx_store_status` (`store_id`, `status`),
+    INDEX `idx_equipment_no` (`equipment_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='器械表';
+
+-- ==================== 15. 器械维护记录表 ====================
+CREATE TABLE `equipment_maintenances` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '维护记录ID',
+    `store_id` INT NOT NULL COMMENT '所属门店ID',
+    `equipment_id` INT NOT NULL COMMENT '器械ID',
+    `maintenance_no` VARCHAR(50) UNIQUE NOT NULL COMMENT '维护单号',
+    `maintenance_type` VARCHAR(20) NOT NULL COMMENT '维护类型：定期/故障/大修',
+    `maintenance_date` DATE NOT NULL COMMENT '维护日期',
+    `maintenance_staff` VARCHAR(50) COMMENT '维护人员',
+    `maintenance_cost` DECIMAL(10,2) DEFAULT 0 COMMENT '维护费用',
+    `description` TEXT COMMENT '维护内容描述',
+    `status` TINYINT DEFAULT 1 COMMENT '0待处理 1处理中 2已完成',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`),
+    FOREIGN KEY (`equipment_id`) REFERENCES `equipments`(`id`),
+    INDEX `idx_equipment_date` (`equipment_id`, `maintenance_date`),
+    INDEX `idx_store_date` (`store_id`, `maintenance_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='器械维护记录表';
+
+-- ==================== 16. 公告表 ====================
+CREATE TABLE `announcements` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '公告ID',
+    `store_id` INT DEFAULT NULL COMMENT '所属门店ID（NULL为全系统公告）',
+    `title` VARCHAR(200) NOT NULL COMMENT '公告标题',
+    `content` TEXT NOT NULL COMMENT '公告内容',
+    `publish_type` VARCHAR(20) DEFAULT 'all' COMMENT '发布范围：all/single',
+    `priority` TINYINT DEFAULT 1 COMMENT '优先级：1普通 2重要 3紧急',
+    `publish_status` TINYINT DEFAULT 0 COMMENT '0草稿 1已发布 2已下架',
+    `publish_time` DATETIME COMMENT '发布时间',
+    `expire_time` DATETIME COMMENT '过期时间',
+    `view_count` INT DEFAULT 0 COMMENT '浏览次数',
+    `author_id` INT COMMENT '发布人ID',
+    `author_name` VARCHAR(50) COMMENT '发布人姓名',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX `idx_store_status` (`store_id`, `publish_status`),
+    INDEX `idx_publish_time` (`publish_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='公告表';
+
+-- ==================== 17. 订单表 ====================
+CREATE TABLE `orders` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '订单ID',
+    `store_id` INT NOT NULL COMMENT '消费门店ID',
+    `order_no` VARCHAR(50) UNIQUE NOT NULL COMMENT '订单号',
+    `member_id` INT NOT NULL COMMENT '会员ID',
+    `order_type` VARCHAR(20) NOT NULL COMMENT '订单类型：membership/course/appointment/product',
+    `order_amount` DECIMAL(10,2) NOT NULL COMMENT '订单金额',
+    `discount_amount` DECIMAL(10,2) DEFAULT 0 COMMENT '优惠金额',
+    `pay_amount` DECIMAL(10,2) NOT NULL COMMENT '实付金额',
+    `pay_method` VARCHAR(20) COMMENT '支付方式：wechat/alipay/cash/card',
+    `pay_status` TINYINT DEFAULT 0 COMMENT '0未支付 1已支付 2已退款',
+    `pay_time` DATETIME COMMENT '支付时间',
+    `sales_employee_id` INT COMMENT '销售员工ID',
+    `remark` TEXT COMMENT '备注',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    FOREIGN KEY (`store_id`) REFERENCES `stores`(`id`),
+    FOREIGN KEY (`member_id`) REFERENCES `members`(`id`),
+    FOREIGN KEY (`sales_employee_id`) REFERENCES `employees`(`id`),
+    INDEX `idx_store_time` (`store_id`, `created_at`),
+    INDEX `idx_pay_status` (`pay_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单表';
+
+-- ==================== 18. 日报表（按门店统计）====================
+CREATE TABLE `reports_daily` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '日报ID',
+    `store_id` INT NOT NULL COMMENT '门店ID',
+    `report_date` DATE NOT NULL COMMENT '报表日期',
+    `revenue` DECIMAL(10,2) DEFAULT 0 COMMENT '当日营收',
+    `order_count` INT DEFAULT 0 COMMENT '订单数量',
+    `new_member_count` INT DEFAULT 0 COMMENT '新增会员数',
+    `member_visit_count` INT DEFAULT 0 COMMENT '会员到店人次',
+    `course_count` INT DEFAULT 0 COMMENT '课程数量',
+    `course_booking_count` INT DEFAULT 0 COMMENT '课程报名数',
+    `appointment_count` INT DEFAULT 0 COMMENT '预约数量',
+    `employee_attendance_rate` DECIMAL(5,2) DEFAULT 0 COMMENT '员工出勤率',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY `uk_store_date` (`store_id`, `report_date`),
+    INDEX `idx_store_date` (`store_id`, `report_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='日报表';
+
+-- ==================== 19. 月报表（按门店统计，方便老板对比）====================
+CREATE TABLE `reports_monthly` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '月报ID',
+    `store_id` INT NOT NULL COMMENT '门店ID',
+    `report_month` VARCHAR(7) NOT NULL COMMENT '报表月份：2024-01',
+    `revenue` DECIMAL(10,2) DEFAULT 0 COMMENT '当月营收',
+    `order_count` INT DEFAULT 0 COMMENT '订单数量',
+    `new_member_count` INT DEFAULT 0 COMMENT '新增会员数',
+    `member_visit_count` INT DEFAULT 0 COMMENT '会员到店人次',
+    `course_count` INT DEFAULT 0 COMMENT '课程数量',
+    `course_booking_count` INT DEFAULT 0 COMMENT '课程报名数',
+    `appointment_count` INT DEFAULT 0 COMMENT '预约数量',
+    `equipment_maintenance_cost` DECIMAL(10,2) DEFAULT 0 COMMENT '器械维护费用',
+    `employee_salary_total` DECIMAL(10,2) DEFAULT 0 COMMENT '员工工资总额',
+    `coach_share_total` DECIMAL(10,2) DEFAULT 0 COMMENT '教练分成总额',
+    `profit` DECIMAL(10,2) DEFAULT 0 COMMENT '利润',
+    `revenue_rank` INT COMMENT '营收排名（全系统）',
+    `growth_rate` DECIMAL(5,2) DEFAULT 0 COMMENT '环比增长率',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY `uk_store_month` (`store_id`, `report_month`),
+    INDEX `idx_store_month` (`store_id`, `report_month`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='月报表';
+
+
+
+-- ==============================新增用户教练登陆功能===================================
+-- 1. 插入缺失的角色
+INSERT INTO `roles` (`role_name`, `role_code`, `description`, `status`) VALUES
+('健身教练', 'coach', '负责课程教学、查看学员、管理个人课表', 1),
+('普通会员', 'member', '仅限C端使用：预约、购卡、个人中心', 1);
+-- 假设插入后 ID: 超级管理员=1, 门店管理员=2, 教练=3, 会员=4
+
+-- 2. 插入教练和会员专属权限
+INSERT INTO `permissions` (`permission_name`, `permission_code`, `module`, `description`) VALUES
+-- 【教练端权限】
+('我的学员-查看', 'coach:students:view', 'coach', '查看分配给自己的学员'),
+('我的课表-查看', 'coach:schedule:view', 'coach', '查看个人排课'),
+('我的课表-管理', 'coach:schedule:manage', 'coach', '调整个人可用时间'),
+('学员签到-确认', 'coach:checkin:confirm', 'coach', '确认学员上课签到'),
+('业绩查看', 'coach:performance:view', 'coach', '查看个人授课统计'),
+-- 【会员端权限】
+('个人中心-查看', 'profile:view', 'member', '查看个人信息'),
+('个人中心-修改', 'profile:update', 'member', '修改资料/密码'),
+('我的会员卡-查看', 'my_card:view', 'card', '查看卡项详情'),
+('我的预约-创建', 'my_appointment:create', 'appointment', '发起预约'),
+('我的预约-取消', 'my_appointment:cancel', 'appointment', '取消预约'),
+('我的课程-报名', 'my_course:book', 'course', '报名团课'),
+('商品购买', 'product:buy', 'product', '购买商品');
+
+-- 3. 绑定角色权限 (假设教练ID=3, 会员ID=4)
+-- 绑定教练权限
+INSERT INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT 3, id FROM permissions WHERE permission_code LIKE 'coach:%' 
+   OR permission_code IN ('profile:update', 'course:view', 'member:view');
+
+-- 绑定会员权限
+INSERT INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT 4, id FROM permissions WHERE permission_code LIKE 'my_%' 
+   OR permission_code LIKE 'profile:%'
+   OR permission_code IN ('course:view', 'announcement:view', 'product:buy');
+   
+   
+-- ====================登陆逻辑=====================
+-- 1. 会员表添加标记 (去掉了 (1))
+ALTER TABLE `members` 
+ADD COLUMN `is_initial_password` TINYINT DEFAULT 1 COMMENT '是否为初始密码：1-是(需强制改密), 0-否(已修改)' 
+AFTER `password_hash`;
+
+-- 2. 教练表添加标记 (去掉了 (1))
+ALTER TABLE `coaches` 
+ADD COLUMN `is_initial_password` TINYINT DEFAULT 1 COMMENT '是否为初始密码：1-是(需强制改密), 0-否(已修改)' 
+AFTER `password_hash`;

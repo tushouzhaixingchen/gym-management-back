@@ -1,0 +1,45 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gym-management-system
+  
+  datasource:
+    url: jdbc:mysql://10.208.198.23:3306/gym_management?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: remoteuser
+    password: A14279600llh@
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      # 重要！表已建好，设置为 none 防止 JPA 修改表结构
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        # 移除手动 dialect 配置，让 Spring Boot 自动适配
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+# ================= 修正点：添加 'gym' 前缀 =================
+gym:
+  jwt:
+    # 【重要】生产环境请务必修改此密钥 (建议 32 位以上随机字符)
+    secret: "gym-management-secret-key-2026-very-long-string-for-security-xyz"
+    # 过期时间：24小时 (毫秒)
+    expiration: 86400000
+    # 签发者
+    issuer: "gym-management-system"
+
+# 日志配置
+logging:
+  level:
+    root: info
+    com.gym.management: debug
+    org.springframework.security: debug # 调试安全问题时开启
+    org.hibernate.SQL: debug            # 查看具体 SQL
+    org.hibernate.type.descriptor.sql.BasicBinder: trace # 查看 SQL 参数

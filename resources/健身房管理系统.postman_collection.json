@@ -1,0 +1,1299 @@
+{
+  "info": {
+    "_postman_id": "d786ca10-7e8d-435c-943f-aa405727a00e",
+    "name": "健身房管理系统",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "51005510",
+    "_collection_link": "https://go.postman.co/collection/51005510-d786ca10-7e8d-435c-943f-aa405727a00e?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "01-认证模块",
+      "item": [
+        {
+          "name": "登录",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// 解析响应 JSON\r",
+                  "const jsonData = pm.response.json();\r",
+                  "\r",
+                  "// 检查响应是否成功\r",
+                  "if (jsonData.code === 200 && jsonData.data && jsonData.data.token) {\r",
+                  "    // 保存 token 到环境变量\r",
+                  "    pm.environment.set(\"token\", jsonData.data.token);\r",
+                  "    \r",
+                  "    // 可选：保存到控制台便于查看\r",
+                  "    console.log(\"✅ Token 已保存:\", jsonData.data.token);\r",
+                  "    \r",
+                  "    // 可选：保存 token 过期时间\r",
+                  "    if (jsonData.data.expireTime) {\r",
+                  "        pm.environment.set(\"tokenExpire\", jsonData.data.expireTime);\r",
+                  "    }\r",
+                  "} else {\r",
+                  "    console.log(\"❌ 登录失败，未保存 token\");\r",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"account\": \"hunter\",\r\n    \"password\": \"123456\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/auth/login",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02-管理员管理",
+      "item": [
+        {
+          "name": "获取管理员列表",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "",
+                "value": "",
+                "type": "text",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/admins",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "admins"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "获取管理员详情",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/admins/4",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "admins",
+                "4"
+              ],
+              "query": [
+                {
+                  "key": "",
+                  "value": null,
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "新增管理员",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"username\": \"hunter\",\r\n  \"password\": \"123456\",\r\n  \"realName\": \"普通管理员\",\r\n  \"roleId\": 2,\r\n  \"storeId\": 2,\r\n  \"phone\": \"13800138089\",\r\n  \"email\": \"test@gym.com\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/admins",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "admins"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "编辑管理员",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"id\": 4,\r\n  \"realName\": \"李四修\",\r\n  \"roleId\": 2,\r\n  \"storeId\": 1,\r\n  \"phone\": \"13800138001\",\r\n  \"email\": \"zhangsan_new@gym.com\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/admins/4",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "admins",
+                "4"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "删除管理员",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/admins/6",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "admins",
+                "6"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03-会员管理",
+      "item": [
+        {
+          "name": "获取会员列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/members?page=1&size=10&status=1",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "members"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "页码（默认1）"
+                },
+                {
+                  "key": "size",
+                  "value": "10",
+                  "description": "每页数量（默认10）"
+                },
+                {
+                  "key": "status",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "获取会员详情",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/members/6",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "6"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "新增会员",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"realName\": \"张三测试5\",\r\n  \"phone\": \"13800138094\",\r\n  \"gender\": 1,\r\n  \"idCard\": \"110101199001011234\",\r\n  \"registerStoreId\": 1,\r\n  \"remark\": \"Postman 自动化测试创建\",\r\n  \"joinDate\": \"2025-09-08\",\r\n  \"cardType\": \"period\"\r\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/members",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "members"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "编辑会员",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"realName\": \"张三修改\",\r\n  \"phone\": \"13800138099\",\r\n  \"gender\": 2,\r\n  \"remark\": \"Postman 测试修改备注\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/members/1",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "删除会员",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "",
+                "value": "",
+                "type": "text",
+                "disabled": true
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": []
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/members/1",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "会员签到",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"memberId\": 1,\r\n  \"storeId\": 1,\r\n  \"checkInMethod\": \"qrcode\",\r\n  \"remark\": \"前台扫码签到\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/members/1/check-in",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "members",
+                "1",
+                "check-in"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04-员工管理",
+      "item": [
+        {
+          "name": "获取员工列表",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"memberId\": 1,\r\n  \"storeId\": 1,\r\n  \"checkInMethod\": \"qrcode\",\r\n  \"remark\": \"前台扫码签到\"\r\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/employees?page=1&size=10&storeId&employeeNo&realName&department&position&status",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "employees"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                },
+                {
+                  "key": "storeId",
+                  "value": null
+                },
+                {
+                  "key": "employeeNo",
+                  "value": null
+                },
+                {
+                  "key": "realName",
+                  "value": null
+                },
+                {
+                  "key": "department",
+                  "value": null
+                },
+                {
+                  "key": "position",
+                  "value": null
+                },
+                {
+                  "key": "status",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "获取员工详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/employees/1",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "employees",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "新增员工",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"storeId\": 1,\r\n  \"employeeNo\": \"EMP20260322003\",\r\n  \"realName\": \"王五\",\r\n  \"gender\": 1,\r\n  \"phone\": \"13800138056\",\r\n  \"email\": \"zhangsan@gym.com\",\r\n  \"department\": \"前台\",\r\n  \"position\": \"前台主管\",\r\n  \"entryDate\": \"2026-03-22\",\r\n  \"baseSalary\": 5000.00,\r\n  \"remark\": \"新员工入职\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/employees",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "employees"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "编辑员工",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"realName\": \"张三丰\",\r\n  \"phone\": \"13900139000\",\r\n  \"position\": \"店长\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/employees/1",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "employees",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "删除员工",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/employees/2",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "employees",
+                "2"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05-器械管理",
+      "item": [
+        {
+          "name": "获取器械列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/equipments?page=1&size=10&storeId=1&equipmentNo&equipmentName&equipmentType&brand&status",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "equipments"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "size",
+                  "value": "10",
+                  "type": "text"
+                },
+                {
+                  "key": "storeId",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "equipmentNo",
+                  "value": null,
+                  "type": "text"
+                },
+                {
+                  "key": "equipmentName",
+                  "value": null,
+                  "type": "text"
+                },
+                {
+                  "key": "equipmentType",
+                  "value": null,
+                  "type": "text"
+                },
+                {
+                  "key": "brand",
+                  "value": null,
+                  "type": "text"
+                },
+                {
+                  "key": "status",
+                  "value": null,
+                  "type": "text"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "获取器械详情",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"memberId\": 1,\r\n  \"storeId\": 1,\r\n  \"checkInMethod\": \"qrcode\",\r\n  \"remark\": \"前台扫码签到\"\r\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/equipments/1",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "equipments",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "新增器械",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"storeId\": 2,\r\n    \"equipmentName\": \"动感单车 S9\",\r\n    \"equipmentType\": \"有氧器械\",\r\n    \"brand\": \"英派斯\",\r\n    \"model\": \"S9-LUX\",\r\n    \"purchaseDate\": \"2024-03-20\",\r\n    \"purchasePrice\": 6800.00,\r\n    \"location\": \"二楼动感单车房 05号\",\r\n    \"status\": 1,\r\n    \"nextMaintenanceDate\": \"2025-04-01\",\r\n    \"remark\": \"商用级动感单车，带智能阻力调节\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/equipments",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "equipments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "编辑器械",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"equipmentName\": \"商用跑步机 X5 升级版\",\r\n    \"location\": \"二楼有氧区 B02\",\r\n    \"status\": 2,\r\n    \"lastMaintenanceDate\": \"2024-12-01\",\r\n    \"nextMaintenanceDate\": \"2025-06-01\",\r\n    \"remark\": \"已升级固件，定期保养\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/equipments/1",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "equipments",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "删除器械",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/equipments/2",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "equipments",
+                "2"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "报修",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"storeId\": 1,\r\n    \"equipmentId\": 1,\r\n    \"maintenanceType\": \"故障\",\r\n    \"maintenanceDate\": \"2025-01-02\",\r\n    \"maintenanceStaff\": \"张三\",\r\n    \"maintenanceCost\": 500.00,\r\n    \"description\": \"电机异响，需要更换零件\",\r\n    \"status\": 1\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/equipments/maintenances",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "equipments",
+                "maintenances"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06-课程管理",
+      "item": [
+        {
+          "name": "获取课程列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/courses",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "courses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "获取课程详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/courses/2",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "courses",
+                "2"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "新增课程",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"storeId\": 1,\r\n    \"coachId\": 1,\r\n    \"courseName\": \"燃脂搏击\",\r\n    \"courseType\": \"拳击\",\r\n    \"courseLevel\": \"intermediate\",\r\n    \"maxSeats\": 15,\r\n    \"startTime\": \"2026-03-30T10:00:00\",\r\n    \"endTime\": \"2026-03-30T11:00:00\",\r\n    \"durationMinutes\": 60,\r\n    \"price\": 129.00,\r\n    \"room\": \"搏击训练区A\",\r\n    \"status\": 1,\r\n    \"remark\": \"高强度燃脂课程，建议有一定运动基础\"\r\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/courses",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "courses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "编辑课程",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"courseName\": \"燃脂搏击 (升级版)\",\r\n    \"maxSeats\": 15,\r\n    \"price\": 129.00,\r\n    \"room\": \"搏击训练区 B\",\r\n    \"remark\": \"升级课程，增加实战环节\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/courses/3",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "courses",
+                "3"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "删除课程",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/courses/3",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "courses",
+                "3"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "07-教练预约管理",
+      "item": [
+        {
+          "name": "获取预约列表",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        },
+        {
+          "name": "获取预约详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/admin/appointments/1/detail",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "appointments",
+                "1",
+                "detail"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "确认预约",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"operatorId\": 5001, // 操作员工ID (可选，如果是系统自动填入，可省略)\r\n  \"remark\": \"已电话确认时间\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/admin/appointments/1/confirm",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "appointments",
+                "1",
+                "confirm"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "标记爽约",
+          "request": {
+            "method": "PUT",
+            "header": []
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "08-公告管理",
+      "item": [
+        {
+          "name": "获取公告列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/admin/announcements",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "announcements"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "获取公告详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/admin/announcements/1",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "announcements",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "新增公告",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"storeId\": null,\r\n    \"title\": \"夏季新课表正式上线\",\r\n    \"content\": \"亲爱的会员朋友们：\\n\\n夏季新课表已于今日正式上线！新增课程包括：\\n• 晨间流瑜伽 (周一/三/五 7:00-8:00)\\n• 户外晨跑团 (周六 6:30-7:30)\\n• 水中健身操 (周二/四 19:00-20:00)\\n\\n欢迎踊跃预约，一起燃动夏日！\\n\\n预约热线：400-888-6666\",\r\n    \"publishType\": \"single\",\r\n    \"priority\": 2,\r\n    \"publishStatus\": 1,\r\n    \"publishTime\": null,\r\n    \"expireTime\": \"2026-04-30T23:59:59\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/admin/announcements",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "announcements"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "修改公告",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"title\": \"2025 年春节放假通知（更新）\",\r\n    \"priority\": 2,\r\n    \"expireTime\": \"2025-02-10T23:59:59\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/admin/announcements/1",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "announcements",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "删除公告",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/admin/announcements/1",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "announcements",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "09-分析与报告",
+      "item": [
+        {
+          "name": "会员统计",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        },
+        {
+          "name": "收入统计",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "会员",
+      "item": [
+        {
+          "name": "预约教练",
+          "item": [
+            {
+              "name": "获取教练列表",
+              "request": {
+                "method": "GET",
+                "header": []
+              },
+              "response": []
+            },
+            {
+              "name": "获取教练详情",
+              "request": {
+                "method": "GET",
+                "header": []
+              },
+              "response": []
+            },
+            {
+              "name": "创建预约",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"coachId\": 1,\r\n  \"storeId\": 2,\r\n  \"date\": \"2024-03-28\",\r\n  \"startTime\": \"14:00:00\",\r\n  \"endTime\": \"15:00:00\",\r\n  \"note\": \"请带哑铃\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseURL}}/api/member/appointments",
+                  "host": [
+                    "{{baseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "member",
+                    "appointments"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "获取我的预约",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseURL}}/api/member/appointments/my",
+                  "host": [
+                    "{{baseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "member",
+                    "appointments",
+                    "my"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "支付预约",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"paymentMethod\": \"ALIPAY\" // 或 WECHAT\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseURL}}/api/member/appointments/3/pay",
+                  "host": [
+                    "{{baseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "member",
+                    "appointments",
+                    "3",
+                    "pay"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "我的",
+          "item": [
+            {
+              "name": "获取我的订单",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseURL}}/api/member/orders/my",
+                  "host": [
+                    "{{baseURL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "member",
+                    "orders",
+                    "my"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ]
+}
