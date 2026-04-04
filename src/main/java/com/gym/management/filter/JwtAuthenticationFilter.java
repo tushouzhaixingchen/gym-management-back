@@ -60,6 +60,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String userType = jwtUtil.getUserTypeFromToken(token);
             String account = jwtUtil.getAccountFromToken(token);
 
+            log.info("【JWT 调试】Token 解析结果 - userId: {}, userType: {}, account: {}", 
+                userId, userType, account);
+
             if (userId == null || !StringUtils.hasText(userType)) {
                 log.error("Token 中缺少必要信息 (userId 或 userType)");
                 filterChain.doFilter(request, response);
@@ -73,18 +76,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             SimpleGrantedAuthority authority = new SimpleGrantedAuthority(roleName);
 
             // 6. 构建 Authentication 对象
-            // principal: 使用 account（用户名），这样 getCurrentUserName() 才能获取到
+            // principal: 使用 userId (Integer)，这样 getCurrentAdmin() 才能直接获取到用户 ID
             // credentials: 密码留空 (因为已经验证过 Token 了)
             // authorities: 动态生成的角色
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(
-                            account,  // 改为使用 account（用户名）
+                            userId,  // 🔴 使用 userId (Integer) 作为 principal
                             null,
                             Collections.singletonList(authority)
                     );
 
-            // 可选：将详细信息放入 details，方便后续获取
-            // authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            log.info("【JWT 调试】Authentication 创建成功 - Principal 类型：{}, Principal 值：{}", 
+                authentication.getPrincipal().getClass().getName(), authentication.getPrincipal());
 
             // 7. 存入 SecurityContext
             SecurityContextHolder.getContext().setAuthentication(authentication);

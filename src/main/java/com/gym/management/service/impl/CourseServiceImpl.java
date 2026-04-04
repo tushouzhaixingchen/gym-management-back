@@ -6,10 +6,12 @@ import com.gym.management.dto.response.CourseBookResponse;
 import com.gym.management.entity.Course;
 import com.gym.management.entity.Store;
 import com.gym.management.entity.Coach;
+import com.gym.management.entity.Admin;
 import com.gym.management.common.exception.BusinessException;
 import com.gym.management.repository.CourseRepository;
 import com.gym.management.repository.StoreRepository;
 import com.gym.management.repository.CoachRepository;
+import com.gym.management.repository.AdminRepository;
 import com.gym.management.service.CourseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +19,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,11 +35,78 @@ public class CourseServiceImpl implements CourseService {
     private final CourseRepository courseRepository;
     private final StoreRepository storeRepository;
     private final CoachRepository coachRepository;
+    private final AdminRepository adminRepository;
+
+    // ================= 辅助方法：获取当前登录管理员信息 =================
+
+    /**
+     * 获取当前登录管理员的 ID（从 SecurityContext）
+     */
+    private Integer getCurrentAdminId() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        
+        if (principal instanceof Integer) {
+            return (Integer) principal;
+        } else {
+            log.warn("【权限检查】Principal 不是 Integer 类型：{}", principal.getClass().getName());
+            return null;
+        }
+    }
+
+    /**
+     * 获取当前登录管理员的信息
+     * @return Admin 对象，如果未找到返回 null
+     */
+    private Admin getCurrentAdmin() {
+        Integer adminId = getCurrentAdminId();
+        if (adminId == null) return null;
+        return adminRepository.findById(adminId).orElse(null);
+    }
+
+    /**
+     * 检查是否为超级管理员（roleId=1）
+     */
+    private boolean isSuperAdmin(Admin admin) {
+        if (admin == null) return false;
+        return admin.getRoleId() != null && admin.getRoleId() == 1;
+    }
 
     // ================= 课程管理 =================
 
     @Override
     public Page<CourseResponse> queryCourses(CourseQueryRequest request) {
+        // 🔴 权限检查：获取当前登录管理员信息
+        Admin currentAdmin = getCurrentAdmin();
+        boolean isSuperAdmin = isSuperAdmin(currentAdmin);
+        Integer currentStoreId = currentAdmin != null ? currentAdmin.getStoreId() : null;
+        
+        log.info("【权限检查】课程列表查询 - 管理员 ID: {}, 用户名：{}, 角色 ID: {}, 是否超级管理员：{}", 
+            currentAdmin != null ? currentAdmin.getId() : "null",
+            currentAdmin != null ? currentAdmin.getUsername() : "null",
+            currentAdmin != null ? currentAdmin.getRoleId() : "null",
+            isSuperAdmin);
+        
+        // 确定最终使用的门店 ID
+        // 规则：
+        // 1. 超级管理员：可以使用前端传的 storeId，也可以不传（查询所有）
+        // 2. 普通管理员：只能查询本店，忽略前端传的 storeId，强制使用当前管理员的 storeId
+        final Integer effectiveStoreId;  // 🔴 声明为 final，以便在 lambda 中使用
+        
+        if (isSuperAdmin) {
+            effectiveStoreId = request.getStoreId();
+            if (effectiveStoreId == null) {
+                log.info("【权限检查】✓ 超级管理员模式：查询所有门店的课程");
+            } else {
+                log.info("【权限检查】✓ 超级管理员模式：查询指定门店 ID={} 的课程", effectiveStoreId);
+            }
+        } else if (currentStoreId != null) {
+            effectiveStoreId = currentStoreId;
+            log.info("【权限检查】✓ 门店管理员模式：只能查询本店 ID={} 的课程", effectiveStoreId);
+        } else {
+            effectiveStoreId = null;
+            log.warn("【权限检查】✗ 当前用户既不是超级管理员也没有门店 ID，无权访问");
+        }
+        
         int page = Math.max(0, request.getPage() - 1);
         int size = Math.min(request.getSize(), 100);
         Sort sort = Sort.by(Sort.Direction.ASC, "startTime");
@@ -45,9 +115,12 @@ public class CourseServiceImpl implements CourseService {
         Specification<Course> spec = (root, query, cb) -> {
             var predicates = new ArrayList<jakarta.persistence.criteria.Predicate>();
 
-            if (request.getStoreId() != null) {
-                predicates.add(cb.equal(root.get("storeId"), request.getStoreId()));
+            // 🔴 添加门店权限过滤
+            if (effectiveStoreId != null) {
+                predicates.add(cb.equal(root.get("storeId"), effectiveStoreId));
+                log.debug("【权限过滤】添加门店条件：storeId={}", effectiveStoreId);
             }
+            
             if (request.getCoachId() != null) {
                 predicates.add(cb.equal(root.get("coachId"), request.getCoachId()));
             }

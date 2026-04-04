@@ -30,6 +30,7 @@ import com.gym.management.service.OrderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -339,36 +340,54 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     // --- 管理员端实现 ---
 
+    /**
+     * 获取当前登录管理员的 ID（从 SecurityContext）
+     */
+    private Integer getCurrentAdminId() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        
+        if (principal instanceof Integer) {
+            return (Integer) principal;
+        } else {
+            log.warn("【权限检查】Principal 不是 Integer 类型：{}", principal.getClass().getName());
+            return null;
+        }
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<AdminAppointmentResponse> getAdminAppointments(AdminAppointmentQueryRequest request) {
         log.info("========== 查询管理员端预约列表 ==========");
         
-        // 获取当前登录用户名
-        String currentUsername = UserContext.getCurrentUserName();
-        log.info("【调试日志】当前登录用户名：{}", currentUsername);
+        // 🔴 直接从 SecurityContext 获取当前登录管理员 ID（Integer 类型）
+        Integer currentAdminId = getCurrentAdminId();
+        log.info("【权限检查】当前登录管理员 ID: {}", currentAdminId);
         
-        // 直接从数据库查询管理员信息，获取门店 ID
+        // 从数据库查询管理员信息，获取门店 ID 和角色 ID
         Integer currentAdminStoreId = null;
+        Integer currentAdminRoleId = null;
         boolean isSuperAdmin = false;
+        String currentUsername = null;
         
-        if (currentUsername != null) {
-            Admin admin = adminRepository.findByUsername(currentUsername).orElse(null);
+        if (currentAdminId != null) {
+            Admin admin = adminRepository.findById(currentAdminId).orElse(null);
             if (admin != null) {
+                currentUsername = admin.getUsername();
                 currentAdminStoreId = admin.getStoreId();
+                currentAdminRoleId = admin.getRoleId();
                 // roleId=1 为超级管理员
                 isSuperAdmin = (admin.getRoleId() != null && admin.getRoleId() == 1);
-                log.info("【调试日志】从数据库查询到管理员信息：username={}, storeId={}, roleId={}, isSuperAdmin={}", 
-                    currentUsername, currentAdminStoreId, admin.getRoleId(), isSuperAdmin);
+                log.info("【权限检查】管理员信息 - id={}, username={}, storeId={}, roleId={}, isSuperAdmin={}", 
+                    currentAdminId, currentUsername, currentAdminStoreId, currentAdminRoleId, isSuperAdmin);
             } else {
-                log.warn("【调试日志】未找到管理员信息：username={}", currentUsername);
+                log.warn("【权限检查】未找到管理员信息：id={}", currentAdminId);
             }
         } else {
-            log.warn("【调试日志】未获取到当前登录用户名");
+            log.warn("【权限检查】未获取到当前登录管理员 ID");
         }
         
-        log.info("【调试日志】当前管理员门店 ID: {}", currentAdminStoreId);
-        log.info("【调试日志】是否超级管理员：{}", isSuperAdmin);
+        log.info("【权限检查】当前管理员门店 ID: {}, 角色 ID: {}, 是否超级管理员：{}", 
+            currentAdminStoreId, currentAdminRoleId, isSuperAdmin);
         
         log.info("请求参数：storeId={}, status={}, keyword={}, startDate={}, endDate={}", 
             request.getStoreId(), request.getStatus(), request.getKeyword(), 
@@ -383,24 +402,28 @@ public class AppointmentServiceImpl implements AppointmentService {
         if (isSuperAdmin) {
             // 超级管理员可以查询所有门店或指定门店
             finalSTOREId = request.getStoreId();
-            log.info("【调试日志】超级管理员，查询门店 ID: {}", finalSTOREId != null ? finalSTOREId : "所有门店");
+            if (finalSTOREId == null) {
+                log.info("【权限检查】✓ 超级管理员模式：查询所有门店");
+            } else {
+                log.info("【权限检查】✓ 超级管理员模式：查询指定门店 ID={}", finalSTOREId);
+            }
         } else if (currentAdminStoreId != null) {
             // 普通管理员只能查询本店
             finalSTOREId = currentAdminStoreId;
-            log.info("【调试日志】普通管理员，强制设置门店 ID 为：{}", finalSTOREId);
+            log.info("【权限检查】✓ 门店管理员模式：只能查询本店 ID={}", finalSTOREId);
         } else {
-            log.warn("【调试日志】当前用户既不是超级管理员也没有门店 ID");
+            log.warn("【权限检查】✗ 当前用户既不是超级管理员也没有门店 ID，无权访问");
         }
         
         final Integer effectiveStoreId = finalSTOREId;
         
-        log.info("【调试日志】最终用于筛选的门店 ID: {}", effectiveStoreId);
+        log.info("【权限检查】最终用于筛选的门店 ID: {}", effectiveStoreId);
         
         // 查询所有预约
         List<Appointment> list = appointmentRepository.findAll();
         log.info("从数据库查询到 {} 条预约记录", list.size());
         
-        // 打印所有预约的门店 ID
+        // 打印所有预约的门店 ID（保留原有调试日志）
         for (Appointment appt : list) {
             log.info("【调试日志】预约 ID={}, 预约单号={}, 所属门店 ID={}", 
                 appt.getId(), appt.getAppointmentNo(), appt.getStoreId());

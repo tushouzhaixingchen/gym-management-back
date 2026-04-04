@@ -6,9 +6,11 @@ import com.gym.management.dto.request.admin.AnnouncementUpdateRequest;
 import com.gym.management.dto.response.AnnouncementResponse;
 import com.gym.management.entity.Announcement;
 import com.gym.management.entity.Store;
+import com.gym.management.entity.Admin;
 import com.gym.management.common.exception.BusinessException;
 import com.gym.management.repository.AnnouncementRepository;
 import com.gym.management.repository.StoreRepository;
+import com.gym.management.repository.AdminRepository;
 import com.gym.management.service.AnnouncementService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -30,11 +33,77 @@ public class AnnouncementServiceImpl implements AnnouncementService {
 
     private final AnnouncementRepository announcementRepository;
     private final StoreRepository storeRepository;
+    private final AdminRepository adminRepository;
+
+    // ================= 辅助方法：获取当前登录管理员信息 =================
+
+    /**
+     * 获取当前登录管理员的 ID（从 SecurityContext）
+     */
+    private Integer getCurrentAdminId() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        
+        if (principal instanceof Integer) {
+            return (Integer) principal;
+        } else {
+            log.warn("【权限检查】Principal 不是 Integer 类型：{}", principal.getClass().getName());
+            return null;
+        }
+    }
+
+    /**
+     * 获取当前登录管理员的信息
+     * @return Admin 对象，如果未找到返回 null
+     */
+    private Admin getCurrentAdmin() {
+        Integer adminId = getCurrentAdminId();
+        if (adminId == null) return null;
+        return adminRepository.findById(adminId).orElse(null);
+    }
+
+    /**
+     * 检查是否为超级管理员（roleId=1）
+     */
+    private boolean isSuperAdmin(Admin admin) {
+        if (admin == null) return false;
+        return admin.getRoleId() != null && admin.getRoleId() == 1;
+    }
 
     // ================= 查询 =================
 
     @Override
     public Page<AnnouncementResponse> queryAnnouncements(AnnouncementQueryRequest request) {
+        // 🔴 权限检查：获取当前登录管理员信息
+        Admin currentAdmin = getCurrentAdmin();
+        boolean isSuperAdmin = isSuperAdmin(currentAdmin);
+        Integer currentStoreId = currentAdmin != null ? currentAdmin.getStoreId() : null;
+        
+        log.info("【权限检查】公告列表查询 - 管理员 ID: {}, 用户名：{}, 角色 ID: {}, 是否超级管理员：{}", 
+            currentAdmin != null ? currentAdmin.getId() : "null",
+            currentAdmin != null ? currentAdmin.getUsername() : "null",
+            currentAdmin != null ? currentAdmin.getRoleId() : "null",
+            isSuperAdmin);
+        
+        // 确定最终使用的门店 ID（用于筛选单门店公告）
+        final Integer effectiveStoreId;
+        
+        if (isSuperAdmin) {
+            // 超级管理员可以查看所有公告（包括全系统和本店）
+            effectiveStoreId = request.getStoreId();
+            if (effectiveStoreId == null) {
+                log.info("【权限检查】✓ 超级管理员模式：查询所有门店 + 全系统的公告");
+            } else {
+                log.info("【权限检查】✓ 超级管理员模式：查询指定门店 ID={} + 全系统的公告", effectiveStoreId);
+            }
+        } else if (currentStoreId != null) {
+            // 门店管理员只能查看本店公告 + 全系统公告
+            effectiveStoreId = currentStoreId;
+            log.info("【权限检查】✓ 门店管理员模式：只能查询本店 ID={} + 全系统的公告", effectiveStoreId);
+        } else {
+            effectiveStoreId = null;
+            log.warn("【权限检查】✗ 当前用户既不是超级管理员也没有门店 ID，无权访问");
+        }
+        
         int page = Math.max(0, request.getPage() - 1);
         int size = Math.min(request.getSize(), 100);
         Sort sort = Sort.by(Sort.Direction.DESC, "priority", "publishTime");
@@ -43,13 +112,18 @@ public class AnnouncementServiceImpl implements AnnouncementService {
         Specification<Announcement> spec = (root, query, cb) -> {
             var predicates = new ArrayList<jakarta.persistence.criteria.Predicate>();
 
-            if (request.getStoreId() != null) {
-                // 查询指定门店或全系统公告
+            // 🔴 添加门店权限过滤
+            if (effectiveStoreId != null) {
+                // 门店管理员模式：查询本店公告 OR 全系统公告（storeId IS NULL）
                 var storePredicate = cb.or(
-                        cb.equal(root.get("storeId"), request.getStoreId()),
-                        cb.isNull(root.get("storeId"))
+                    cb.equal(root.get("storeId"), effectiveStoreId),
+                    cb.isNull(root.get("storeId"))
                 );
                 predicates.add(storePredicate);
+                log.debug("【权限过滤】添加门店条件：storeId={} OR storeId IS NULL", effectiveStoreId);
+            } else {
+                // 超级管理员查询所有：不添加门店限制
+                log.debug("【权限过滤】超级管理员模式，不添加门店限制");
             }
 
             if (request.getPublishStatus() != null) {

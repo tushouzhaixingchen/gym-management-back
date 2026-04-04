@@ -37,28 +37,50 @@ public class AdminServiceImpl implements AdminService {
 
     // 获取当前登录管理员（从 SecurityContext 获取）
     private Admin getCurrentAdmin() {
-        // TODO: 从 SecurityContextHolder 获取当前登录用户
-        // 这里先返回 null，后续结合 JWT 完善
         Object principal = Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()).getPrincipal();
 
         if (!(principal instanceof Integer)) {
+            log.warn("【权限检查】Principal 类型错误：{}", principal.getClass().getName());
             return null;
         }
 
-        Integer adminId = (int)principal;
-
-        return adminRepository.findById(adminId)
-                .orElse(null);
+        Integer adminId = (Integer)principal;
+        Admin admin = adminRepository.findById(adminId).orElse(null);
+        
+        if (admin != null) {
+            log.info("【权限检查】当前登录管理员：id={}, username={}, roleId={}", 
+                admin.getId(), admin.getUsername(), admin.getRoleId());
+        } else {
+            log.warn("【权限检查】未找到管理员信息：id={}", adminId);
+        }
+        
+        return admin;
     }
 
     // 检查是否为超级管理员
     private boolean isSuperAdmin(Admin admin) {
-        if (admin == null) return false;
+        if (admin == null) {
+            log.warn("【权限检查】管理员为 null，不是超级管理员");
+            return false;
+        }
+        
+        // 🔴 方式 1：直接通过 roleId=1 判断（推荐，性能更好）
+        if (admin.getRoleId() != null && admin.getRoleId() == 1) {
+            log.info("【权限检查】✓ 是超级管理员 (roleId=1): id={}, username={}", 
+                admin.getId(), admin.getUsername());
+            return true;
+        }
+        
+        // 方式 2：通过查询角色表判断 role_code
         Role role = roleRepository.findById(admin.getRoleId()).orElse(null);
         if(role != null){
-            log.info("当前管理员角色：{}", role.getRoleCode());
+            log.info("【权限检查】当前管理员角色：{}, roleId={}, 是否超级管理员：{}", 
+                role.getRoleCode(), admin.getRoleId(), "super_admin".equals(role.getRoleCode()));
+            return "super_admin".equals(role.getRoleCode());
         }
-        return role != null && "super_admin".equals(role.getRoleCode());
+        
+        log.warn("【权限检查】未找到角色信息：roleId={}", admin.getRoleId());
+        return false;
     }
 
     @Override
