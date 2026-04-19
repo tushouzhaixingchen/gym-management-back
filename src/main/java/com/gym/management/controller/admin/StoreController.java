@@ -34,7 +34,6 @@ public class StoreController {
      * @return 分页的门店列表
      */
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Result<PageResult<StoreResponse>>> getStoreList(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
@@ -56,7 +55,6 @@ public class StoreController {
      * @return 门店详细信息
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Result<StoreResponse>> getStoreDetail(@PathVariable Integer id) {
         log.info("查询门店详情 | 门店ID: {}", id);
         

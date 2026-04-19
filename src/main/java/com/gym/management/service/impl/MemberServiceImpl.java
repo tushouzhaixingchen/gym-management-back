@@ -1,6 +1,9 @@
 package com.gym.management.service.impl;
 
 import com.gym.management.dto.request.admin.*;
+import com.gym.management.dto.request.member.ChangePasswordRequest;
+import com.gym.management.dto.request.member.MemberProfileUpdateRequest;
+import com.gym.management.dto.response.MemberProfileVO;
 import com.gym.management.dto.response.MemberResponse;
 import com.gym.management.dto.response.MemberVisitResponse;
 import com.gym.management.entity.Member;
@@ -83,6 +86,12 @@ public class MemberServiceImpl implements MemberService {
                 .orElseThrow(() -> new BusinessException("会员不存在，ID: " + id));
         String storeName = fetchStoreName(member.getRegisterStoreId());
         return MemberResponse.fromEntity(member, storeName);
+    }
+
+    @Override
+    public Member getMemberById(Integer id) {
+        return memberRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("会员不存在，ID: " + id));
     }
 
     // ================= 基础维护 =================
@@ -196,6 +205,101 @@ public class MemberServiceImpl implements MemberService {
 
         log.info("会员 {} 密码已重置，新密码: {}", member.getPhone(), rawPassword);
         return response;
+    }
+
+    @Override
+    public MemberProfileVO getMemberProfile(Integer memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException("会员不存在"));
+        return convertToProfileVO(member);
+    }
+
+    @Override
+    @Transactional
+    public MemberProfileVO updateMemberProfile(Integer memberId, MemberProfileUpdateRequest request) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException("会员不存在"));
+
+        // 只允许会员修改自己的基础信息
+        if (request.getRealName() != null) {
+            member.setRealName(request.getRealName());
+        }
+        if (request.getGender() != null) {
+            member.setGender(request.getGender());
+        }
+        if (request.getEmail() != null) {
+            member.setEmail(request.getEmail());
+        }
+        if (request.getBirthday() != null) {
+            member.setBirthday(request.getBirthday());
+        }
+        if (request.getRemark() != null) {
+            member.setRemark(request.getRemark());
+        }
+
+        member.setUpdatedAt(LocalDateTime.now());
+        memberRepository.save(member);
+
+        return convertToProfileVO(member);
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(Integer memberId, ChangePasswordRequest request) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException("会员不存在"));
+
+        // 验证旧密码
+        if (!PasswordUtil.matches(request.getOldPassword(), member.getPasswordHash())) {
+            throw new BusinessException("旧密码错误");
+        }
+
+        // 验证新密码不能为空
+        if (request.getNewPassword() == null || request.getNewPassword().trim().isEmpty()) {
+            throw new BusinessException("新密码不能为空");
+        }
+
+        // 更新密码
+        member.setPasswordHash(PasswordUtil.encode(request.getNewPassword()));
+        // 标记为非初始密码
+        member.setIsInitialPassword(2);
+        member.setUpdatedAt(LocalDateTime.now());
+
+        memberRepository.save(member);
+        log.info("会员 {} 密码已修改", member.getPhone());
+    }
+
+    /**
+     * 将 Member 实体转换为 MemberProfileVO
+     */
+    private MemberProfileVO convertToProfileVO(Member member) {
+        MemberProfileVO vo = new MemberProfileVO();
+        vo.setId(member.getId());
+        vo.setMemberNo(member.getMemberNo());
+        vo.setRealName(member.getRealName());
+        vo.setGender(member.getGender());
+        vo.setGenderText(member.getGenderText());
+        vo.setPhone(member.getPhone());
+        vo.setEmail(member.getEmail());
+        vo.setBirthday(member.getBirthday());
+        vo.setRegisterStoreId(member.getRegisterStoreId());
+        vo.setJoinDate(member.getJoinDate());
+        vo.setExpireDate(member.getExpireDate());
+        vo.setCardType(member.getCardType());
+        vo.setTotalTimes(member.getTotalTimes());
+        vo.setRemainingTimes(member.getRemainingTimes());
+        vo.setBalance(member.getBalance());
+        vo.setTotalConsumption(member.getTotalConsumption());
+        vo.setVisitCount(member.getVisitCount());
+        vo.setLastVisitAt(member.getLastVisitAt());
+        vo.setLastVisitStoreId(member.getLastVisitStoreId());
+        vo.setStatus(member.getStatus());
+        vo.setStatusText(member.getStatusText());
+        vo.setExpired(member.isExpired());
+        vo.setRemark(member.getRemark());
+        vo.setCreatedAt(member.getCreatedAt());
+        vo.setUpdatedAt(member.getUpdatedAt());
+        return vo;
     }
 
     @Override

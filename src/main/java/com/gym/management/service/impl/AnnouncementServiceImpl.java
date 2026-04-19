@@ -171,8 +171,8 @@ public class AnnouncementServiceImpl implements AnnouncementService {
             throw new BusinessException("该公告已过期");
         }
 
-        // 检查门店权限 (单门店公告只能查看本门店的)
-        if (announcement.getStoreId() != null && !announcement.getStoreId().equals(storeId)) {
+        // 检查门店权限 (storeId 为 null 时会员可以查看所有公告，不做门店隔离)
+        if (storeId != null && announcement.getStoreId() != null && !announcement.getStoreId().equals(storeId)) {
             throw new BusinessException("无权查看该门店公告");
         }
 
@@ -185,17 +185,26 @@ public class AnnouncementServiceImpl implements AnnouncementService {
 
     @Override
     public Page<AnnouncementResponse> getPublishedAnnouncements(Integer storeId, Integer page, Integer size) {
+        log.info("【公告查询】会员端公告列表查询 - storeId: {}, page: {}, size: {}", storeId, page, size);
+        
         int pageNum = Math.max(0, page - 1);
         int pageSize = Math.min(size, 100);
         PageRequest pageRequest = PageRequest.of(pageNum, pageSize);
-        LocalDateTime now = LocalDateTime.now();
 
         Page<Announcement> pageData;
         if (storeId != null) {
-            pageData = announcementRepository.findPublishedAnnouncementsByStore(storeId, now, pageRequest);
+            log.info("【公告查询】使用门店过滤查询 - storeId: {}", storeId);
+            pageData = announcementRepository.findAllPublishedAnnouncementsByStore(storeId, pageRequest);
         } else {
-            pageData = announcementRepository.findPublishedAnnouncements(now, pageRequest);
+            log.info("【公告查询】使用全量查询（无门店过滤，包含已过期）");
+            pageData = announcementRepository.findAllPublishedAnnouncements(pageRequest);
         }
+        
+        log.info("【公告查询】数据库返回结果 - 总数: {}, 当前页数量: {}", pageData.getTotalElements(), pageData.getContent().size());
+        pageData.getContent().forEach(a -> 
+            log.info("【公告查询】公告 ID: {}, 标题: {}, storeId: {}, publishStatus: {}, expireTime: {}", 
+                a.getId(), a.getTitle(), a.getStoreId(), a.getPublishStatus(), a.getExpireTime())
+        );
 
         return pageData.map(announcement -> {
             String storeName = fetchStoreName(announcement.getStoreId());

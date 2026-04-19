@@ -3,6 +3,8 @@
 package com.gym.management.service;
 
 import com.gym.management.dto.request.admin.*;
+import com.gym.management.dto.request.member.ChangePasswordRequest;
+import com.gym.management.dto.request.member.MemberProfileUpdateRequest;
 import com.gym.management.dto.response.*;
 import org.springframework.data.domain.Page;
 
@@ -29,9 +31,15 @@ public interface MemberService {
      * 获取会员详情
      * @param id 会员ID
      * @return 会员详细信息
-     * @throws BusinessException 如果会员不存在
      */
     MemberResponse getMemberDetail(Integer id);
+
+    /**
+     * 根据 ID 获取会员实体对象
+     * @param id 会员ID
+     * @return 会员实体
+     */
+    com.gym.management.entity.Member getMemberById(Integer id);
 
     // ================= 基础维护 (CRUD) =================
 
@@ -123,4 +131,30 @@ public interface MemberService {
      * @return 包含临时密码的会员响应
      */
     MemberResponse resetMemberPassword(Integer id);
+
+    // ================= 会员个人中心服务 =================
+
+    /**
+     * 获取会员个人信息
+     * @param memberId 会员ID
+     * @return 会员个人信息
+     */
+    MemberProfileVO getMemberProfile(Integer memberId);
+
+    /**
+     * 更新会员个人信息
+     * 会员只能修改自己的基础信息（姓名、性别、邮箱、生日、备注）
+     * @param memberId 会员ID
+     * @param request 更新请求
+     * @return 更新后的会员个人信息
+     */
+    MemberProfileVO updateMemberProfile(Integer memberId, MemberProfileUpdateRequest request);
+
+    /**
+     * 会员修改密码
+     * 验证旧密码，更新为新密码，并将 is_initial_password 设置为 2
+     * @param memberId 会员ID
+     * @param request 修改密码请求（旧密码和新密码）
+     */
+    void changePassword(Integer memberId, ChangePasswordRequest request);
 }

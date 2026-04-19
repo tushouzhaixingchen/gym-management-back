@@ -504,3 +504,27 @@ AFTER `password_hash`;
 ALTER TABLE `coaches` 
 ADD COLUMN `is_initial_password` TINYINT DEFAULT 1 COMMENT '是否为初始密码：1-是(需强制改密), 0-否(已修改)' 
 AFTER `password_hash`;
+
+ALTER TABLE `appointments` 
+ADD COLUMN `pay_status` TINYINT DEFAULT 0 COMMENT '支付状态：0未支付 1已支付' AFTER `status`,
+ADD COLUMN `pay_time` DATETIME COMMENT '支付时间' AFTER `pay_status`,
+ADD COLUMN `pay_method` TINYINT COMMENT '支付方式：1微信 2支付宝 3现金' AFTER `pay_time`,
+ADD COLUMN `confirmed_at` DATETIME COMMENT '确认时间' AFTER `status`,
+ADD COLUMN `confirmed_by` INT COMMENT '确认人ID（管理员）' AFTER `confirmed_at`,
+ADD COLUMN `cancel_reason` VARCHAR(255) COMMENT '取消/拒绝原因' AFTER `actual_duration`,
+ADD COLUMN `cancel_by` TINYINT COMMENT '取消方：1会员 2管理员' AFTER `cancel_reason`;
+
+CREATE TABLE `coach_schedules` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '排班ID',
+    `coach_id` INT NOT NULL COMMENT '教练ID',
+    `work_date` DATE NOT NULL COMMENT '工作日期',
+    `start_time` TIME NOT NULL COMMENT '上班开始时间（如14:00）',
+    `end_time` TIME NOT NULL COMMENT '上班结束时间（如21:00）',
+    `status` TINYINT DEFAULT 1 COMMENT '状态：0-休息(不可约), 1-正常(可约), 2-临时请假',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    
+    -- 唯一索引：确保同一教练同一天只有一条排班记录
+    UNIQUE KEY `uk_coach_work_date` (`coach_id`, `work_date`),
+    INDEX `idx_work_date` (`work_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教练排班表';

@@ -677,9 +677,25 @@ public class AppointmentServiceImpl implements AppointmentService {
         // 设置支付状态描述
         res.setPayStatusDesc(getPayStatusDesc(appt.getPayStatus()));
         
-        // TODO: 关联查询教练姓名和门店名称
-        // res.setCoachName(...);
-        // res.setStoreName(...);
+        // 关联查询教练姓名
+        try {
+            Coach coach = coachRepository.findById(appt.getCoachId()).orElse(null);
+            if (coach != null) {
+                res.setCoachName(coach.getRealName());
+            }
+        } catch (Exception e) {
+            log.warn("查询教练信息失败 | coachId: {}", appt.getCoachId(), e);
+        }
+        
+        // 关联查询门店名称
+        try {
+            Store store = storeRepository.findById(appt.getStoreId()).orElse(null);
+            if (store != null) {
+                res.setStoreName(store.getStoreName());
+            }
+        } catch (Exception e) {
+            log.warn("查询门店信息失败 | storeId: {}", appt.getStoreId(), e);
+        }
         
         return res;
     }

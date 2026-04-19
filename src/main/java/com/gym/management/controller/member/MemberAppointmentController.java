@@ -27,6 +27,17 @@ public class MemberAppointmentController {
     private AppointmentService appointmentService;
 
     /**
+     * 查看我的预约记录
+     * 返回当前登录会员的所有预约记录，按创建时间倒序排列
+     */
+    @GetMapping
+    @PreAuthorize("hasRole('MEMBER')")
+    public List<AppointmentResponse> getAppointments() {
+        Integer memberId = getCurrentMemberId();
+        return appointmentService.getMyAppointments(memberId);
+    }
+
+    /**
      * 获取教练列表 (分页或列表)
      */
     @GetMapping("/coaches")

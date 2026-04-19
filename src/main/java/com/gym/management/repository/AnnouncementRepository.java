@@ -30,7 +30,17 @@ public interface AnnouncementRepository extends JpaRepository<Announcement, Inte
     /** 查询某门店某状态的公告 */
     Page<Announcement> findByStoreIdAndPublishStatus(Integer storeId, Integer publishStatus, Pageable pageable);
 
-    /** 查询已发布的公告 (按优先级和发布时间排序) */
+    /** 查询已发布的公告 (按优先级和发布时间排序，包含已过期) */
+    @Query("SELECT a FROM Announcement a WHERE a.publishStatus = 1 ORDER BY a.priority DESC, a.publishTime DESC")
+    Page<Announcement> findAllPublishedAnnouncements(Pageable pageable);
+
+    /** 查询某门店已发布的公告 (包含已过期) */
+    @Query("SELECT a FROM Announcement a WHERE a.publishStatus = 1 AND (a.storeId = :storeId OR a.storeId IS NULL) ORDER BY a.priority DESC, a.publishTime DESC")
+    Page<Announcement> findAllPublishedAnnouncementsByStore(
+            @Param("storeId") Integer storeId,
+            Pageable pageable);
+
+    /** 查询已发布的公告 (按优先级和发布时间排序，仅未过期) */
     @Query("SELECT a FROM Announcement a WHERE a.publishStatus = 1 AND (a.expireTime IS NULL OR a.expireTime > :now) ORDER BY a.priority DESC, a.publishTime DESC")
     Page<Announcement> findPublishedAnnouncements(@Param("now") LocalDateTime now, Pageable pageable);
 
