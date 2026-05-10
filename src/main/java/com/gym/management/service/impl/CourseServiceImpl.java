@@ -1,17 +1,22 @@
 package com.gym.management.service.impl;
 
 import com.gym.management.dto.request.admin.*;
+import com.gym.management.dto.request.member.CourseBookingRequest;
+import com.gym.management.dto.request.member.PaymentRequest;
 import com.gym.management.dto.response.CourseResponse;
 import com.gym.management.dto.response.CourseBookResponse;
+import com.gym.management.dto.response.CourseBookingResponse;
 import com.gym.management.entity.Course;
 import com.gym.management.entity.Store;
 import com.gym.management.entity.Coach;
 import com.gym.management.entity.Admin;
+import com.gym.management.entity.CourseBooking;
 import com.gym.management.common.exception.BusinessException;
 import com.gym.management.repository.CourseRepository;
 import com.gym.management.repository.StoreRepository;
 import com.gym.management.repository.CoachRepository;
 import com.gym.management.repository.AdminRepository;
+import com.gym.management.repository.CourseBookingRepository;
 import com.gym.management.service.CourseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +42,7 @@ public class CourseServiceImpl implements CourseService {
     private final StoreRepository storeRepository;
     private final CoachRepository coachRepository;
     private final AdminRepository adminRepository;
+    private final CourseBookingRepository courseBookingRepository;
 
     // ================= 辅助方法：获取当前登录管理员信息 =================
 
@@ -498,5 +505,223 @@ public class CourseServiceImpl implements CourseService {
         if (!conflicts.isEmpty()) {
             throw new BusinessException("该教室在该时间段已被占用");
         }
+    }
+
+    // ================= 会员端课程报名实现 =================
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CourseResponse> queryCoursesForMember(Integer page, Integer size, Integer storeId) {
+        log.info("========== 查询可报名课程列表 | page: {}, size: {}, storeId: {} ==========", page, size, storeId);
+        
+        // 分页参数处理
+        int pageNum = Math.max(0, page - 1);
+        int pageSize = Math.min(size, 100);
+        Sort sort = Sort.by(Sort.Direction.ASC, "startTime");
+        PageRequest pageRequest = PageRequest.of(pageNum, pageSize, sort);
+
+        // 构建查询条件：只查询可预约的课程（status=1）
+        Specification<Course> spec = (root, query, cb) -> {
+            var predicates = new ArrayList<jakarta.persistence.criteria.Predicate>();
+            
+            // 只查询可预约的课程
+            predicates.add(cb.equal(root.get("status"), 1));
+            
+            // 如果指定了门店，则过滤
+            if (storeId != null) {
+                predicates.add(cb.equal(root.get("storeId"), storeId));
+            }
+            
+            // 只查询未开始的课程
+            predicates.add(cb.greaterThan(root.get("startTime"), LocalDateTime.now()));
+            
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+
+        Page<Course> pageData = courseRepository.findAll(spec, pageRequest);
+        log.info("查询到 {} 条可报名课程", pageData.getTotalElements());
+        
+        return pageData.map(course -> {
+            String storeName = fetchStoreName(course.getStoreId());
+            String coachName = fetchCoachName(course.getCoachId());
+            return CourseResponse.fromEntity(course, storeName, coachName);
+        });
+    }
+
+    @Override
+    @Transactional
+    public CourseBookingResponse memberBookCourse(CourseBookingRequest request, Integer memberId) {
+        log.info("========== 会员报名课程 | memberId: {}, courseId: {} ==========", memberId, request.getCourseId());
+
+        // 1. 查询课程信息
+        Course course = courseRepository.findById(request.getCourseId())
+                .orElseThrow(() -> new BusinessException("课程不存在"));
+
+        // 2. 检查课程状态
+        if (course.getStatus() == 0) {
+            throw new BusinessException("课程已满，无法报名");
+        }
+        if (course.getStatus() == 2) {
+            throw new BusinessException("课程已取消");
+        }
+        if (course.getStatus() == 3) {
+            throw new BusinessException("课程进行中，无法报名");
+        }
+        if (course.getStatus() == 4) {
+            throw new BusinessException("课程已结束，无法报名");
+        }
+
+        // 3. 检查是否已报名
+        boolean alreadyBooked = courseBookingRepository.existsByMemberIdAndCourseId(memberId, request.getCourseId());
+        if (alreadyBooked) {
+            throw new BusinessException("您已报名该课程");
+        }
+
+        // 4. 检查剩余座位
+        int availableSeats = course.getMaxSeats() - course.getBookedSeats();
+        if (availableSeats <= 0) {
+            throw new BusinessException("课程已满，无法报名");
+        }
+
+        // 5. 创建报名记录（直接设置为已支付）
+        String bookingNo = "CB" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+                + String.format("%04d", memberId);
+
+        CourseBooking booking = CourseBooking.builder()
+                .storeId(course.getStoreId())
+                .bookingNo(bookingNo)
+                .memberId(memberId)
+                .courseId(course.getId())
+                .price(course.getPrice())
+                .coachShare(java.math.BigDecimal.ZERO)
+                .status(0)
+                .payStatus(1)
+                .payMethod(request.getPayMethod())
+                .payTime(LocalDateTime.now())
+                .remark(request.getRemark())
+                .build();
+
+        courseBookingRepository.save(booking);
+        log.info("创建课程报名记录成功 | bookingNo: {}, courseId: {}, memberId: {}", 
+                bookingNo, course.getId(), memberId);
+
+        // 6. 【关键】报名成功后，课程的 booked_seats +1
+        course.setBookedSeats(course.getBookedSeats() + 1);
+        
+        // 7. 如果报名后已满，更新课程状态为已满
+        if (course.getBookedSeats() >= course.getMaxSeats()) {
+            course.setStatus(0);
+            log.info("课程已满，更新状态 | courseId: {}, bookedSeats: {}/{}", 
+                    course.getId(), course.getBookedSeats(), course.getMaxSeats());
+        }
+        
+        courseRepository.save(course);
+        log.info("报名成功，课程报名人数+1 | courseId: {}, 当前报名人数: {}/{}", 
+                course.getId(), course.getBookedSeats(), course.getMaxSeats());
+
+        // 8. 构建响应
+        return convertToBookingResponse(booking, course);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CourseBookingResponse> getMyCourseBookings(Integer memberId) {
+        log.info("========== 查询会员课程报名列表 | memberId: {} ==========", memberId);
+        
+        List<CourseBooking> bookings = courseBookingRepository.findByMemberIdOrderByCreatedAtDesc(memberId);
+        log.info("查询到 {} 条报名记录", bookings.size());
+
+        return bookings.stream()
+                .map(booking -> {
+                    Course course = courseRepository.findById(booking.getCourseId()).orElse(null);
+                    return convertToBookingResponse(booking, course);
+                })
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public CourseBookingResponse payCourseBooking(Integer bookingId, PaymentRequest request) {
+        log.info("========== 支付课程报名 | bookingId: {} ==========", bookingId);
+
+        // 1. 查询报名记录
+        CourseBooking booking = courseBookingRepository.findById(bookingId)
+                .orElseThrow(() -> new BusinessException("报名记录不存在"));
+
+        // 2. 校验状态
+        if (booking.getPayStatus() == 1) {
+            throw new BusinessException("该报名已支付");
+        }
+
+        // 3. 查询课程信息
+        Course course = courseRepository.findById(booking.getCourseId())
+                .orElseThrow(() -> new BusinessException("课程不存在"));
+
+        // 4. 更新支付信息
+        booking.setPayStatus(1);
+        booking.setPayMethod(request.getPayMethod());
+        booking.setPayTime(LocalDateTime.now());
+        courseBookingRepository.save(booking);
+
+        // 5. 【关键】支付成功后，课程的 booked_seats +1
+        course.setBookedSeats(course.getBookedSeats() + 1);
+        
+        // 6. 如果报名后已满，更新课程状态为已满
+        if (course.getBookedSeats() >= course.getMaxSeats()) {
+            course.setStatus(0); // 0 表示已满
+            log.info("课程已满，更新状态 | courseId: {}, bookedSeats: {}/{}", 
+                    course.getId(), course.getBookedSeats(), course.getMaxSeats());
+        }
+        
+        courseRepository.save(course);
+        log.info("支付成功，课程报名人数+1 | courseId: {}, 当前报名人数: {}/{}", 
+                course.getId(), course.getBookedSeats(), course.getMaxSeats());
+
+        // 7. 构建响应
+        return convertToBookingResponse(booking, course);
+    }
+
+    /**
+     * 将 CourseBooking 实体转换为响应对象
+     */
+    private CourseBookingResponse convertToBookingResponse(CourseBooking booking, Course course) {
+        CourseBookingResponse response = CourseBookingResponse.builder()
+                .id(booking.getId())
+                .bookingNo(booking.getBookingNo())
+                .courseId(booking.getCourseId())
+                .price(booking.getPrice())
+                .status(booking.getStatus())
+                .statusText(CourseBookingResponse.getStatusText(booking.getStatus()))
+                .payStatus(booking.getPayStatus())
+                .payStatusText(CourseBookingResponse.getPayStatusText(booking.getPayStatus()))
+                .payTime(booking.getPayTime())
+                .payMethod(booking.getPayMethod())
+                .payMethodText(CourseBookingResponse.getPayMethodText(booking.getPayMethod()))
+                .memberCheckInTime(booking.getMemberCheckInTime())
+                .memberCheckOutTime(booking.getMemberCheckOutTime())
+                .feedbackScore(booking.getFeedbackScore())
+                .remark(booking.getRemark())
+                .createdAt(booking.getCreatedAt())
+                .build();
+
+        if (course != null) {
+            response.setCourseName(course.getCourseName());
+            response.setCourseType(course.getCourseType());
+            response.setStartTime(course.getStartTime());
+            response.setEndTime(course.getEndTime());
+            response.setRoom(course.getRoom());
+            response.setStoreId(course.getStoreId());
+            response.setCoachId(course.getCoachId());
+            
+            // 获取门店名称
+            String storeName = fetchStoreName(course.getStoreId());
+            response.setStoreName(storeName);
+            
+            // 获取教练名称
+            String coachName = fetchCoachName(course.getCoachId());
+            response.setCoachName(coachName);
+        }
+
+        return response;
     }
 }

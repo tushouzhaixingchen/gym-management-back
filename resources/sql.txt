@@ -308,7 +308,7 @@ CREATE TABLE `course_bookings` (
     `course_id` INT NOT NULL COMMENT '课程ID',
     `price` DECIMAL(10,2) COMMENT '报名价格',
     `coach_share` DECIMAL(10,2) DEFAULT 0 COMMENT '教练分成',
-    `status` TINYINT DEFAULT 0 COMMENT '0待确认 1已确认 2已完成 3已取消 4已爽约',
+    `status` TINYINT DEFAULT 0 COMMENT '0已报名 1已结束',
     `member_check_in_time` DATETIME COMMENT '会员签到时间',
     `member_check_out_time` DATETIME COMMENT '会员签退时间',
     `actual_attend_minutes` INT COMMENT '实际出勤时长（分钟）',
@@ -324,6 +324,7 @@ CREATE TABLE `course_bookings` (
     INDEX `idx_course_status` (`course_id`, `status`),
     INDEX `idx_store_date` (`store_id`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程报名表';
+
 
 -- ==================== 14. 器械表 ====================
 CREATE TABLE `equipments` (
@@ -514,6 +515,11 @@ ADD COLUMN `confirmed_by` INT COMMENT '确认人ID（管理员）' AFTER `confir
 ADD COLUMN `cancel_reason` VARCHAR(255) COMMENT '取消/拒绝原因' AFTER `actual_duration`,
 ADD COLUMN `cancel_by` TINYINT COMMENT '取消方：1会员 2管理员' AFTER `cancel_reason`;
 
+ALTER TABLE `course_bookings` 
+ADD COLUMN `pay_status` TINYINT DEFAULT 0 COMMENT '支付状态：0未支付 1已支付' AFTER `status`,
+ADD COLUMN `pay_time` DATETIME COMMENT '支付时间' AFTER `pay_status`,
+ADD COLUMN `pay_method` TINYINT COMMENT '支付方式：1微信 2支付宝 3现金' AFTER `pay_time`;
+
 CREATE TABLE `coach_schedules` (
     `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT '排班ID',
     `coach_id` INT NOT NULL COMMENT '教练ID',
@@ -528,3 +534,17 @@ CREATE TABLE `coach_schedules` (
     UNIQUE KEY `uk_coach_work_date` (`coach_id`, `work_date`),
     INDEX `idx_work_date` (`work_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教练排班表';
+
+
+-- 如果该事件已存在，先删除以防报错
+DROP EVENT IF EXISTS auto_end_courses;
+-- 创建新的事件
+CREATE EVENT auto_end_courses
+ON SCHEDULE EVERY 1 MINUTE  -- 设定频率为每1分钟执行一次
+STARTS CURRENT_TIMESTAMP    -- 从当前时间开始生效
+ENABLE                      -- 创建后直接启用
+DO
+  UPDATE courses
+  SET status = 4            -- 将状态更新为 4 (已结束)
+  WHERE end_time < NOW()    -- 筛选结束时间早于当前时间的课程
+    AND status != 4;        -- 排除已经是“已结束”状态的，提升性能

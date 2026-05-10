@@ -1,0 +1,211 @@
+{
+  "info": {
+    "_postman_id": "member-course-booking-api",
+    "name": "会员端课程报名接口",
+    "description": "会员端课程报名相关的所有接口，包含角色隔离和支付成功后 booked_seats +1 功能",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. 获取可报名的课程列表",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL}}/api/member/courses?page=1&size=10&storeId=1",
+          "host": [
+            "{{baseURL}}"
+          ],
+          "path": [
+            "api",
+            "member",
+            "courses"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1",
+              "description": "页码（默认1）"
+            },
+            {
+              "key": "size",
+              "value": "10",
+              "description": "每页数量（默认10）"
+            },
+            {
+              "key": "storeId",
+              "value": "1",
+              "description": "门店ID（可选）"
+            }
+          ]
+        },
+        "description": "获取可报名的课程列表（分页）\n🔐 权限：仅 MEMBER 角色可访问\n\n查询条件：\n- 只返回 status=1（可预约）的课程\n- 只返回未开始的课程\n- 可按门店过滤"
+      },
+      "response": []
+    },
+    {
+      "name": "0.1 获取课程详情",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL}}/api/member/courses/1",
+          "host": [
+            "{{baseURL}}"
+          ],
+          "path": [
+            "api",
+            "member",
+            "courses",
+            "1"
+          ]
+        },
+        "description": "获取指定课程的详细信息\n🔐 权限：仅 MEMBER 角色可访问\n\n路径参数：\n- courseId: 课程 ID"
+      },
+      "response": []
+    },
+    {
+      "name": "1. 获取我的课程报名列表",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL}}/api/member/courses/bookings",
+          "host": [
+            "{{baseURL}}"
+          ],
+          "path": [
+            "api",
+            "member",
+            "courses",
+            "bookings"
+          ]
+        },
+        "description": "获取当前登录会员的所有课程报名记录\n🔐 权限：仅 MEMBER 角色可访问"
+      },
+      "response": []
+    },
+    {
+      "name": "2. 报名课程",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"courseId\": 1,\n  \"remark\": \"我想参加这个课程\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL}}/api/member/courses/book",
+          "host": [
+            "{{baseURL}}"
+          ],
+          "path": [
+            "api",
+            "member",
+            "courses",
+            "book"
+          ]
+        },
+        "description": "会员报名指定课程\n🔐 权限：仅 MEMBER 角色可访问\n\n请求参数：\n- courseId: 课程 ID（必填）\n- remark: 备注（可选）\n\n业务逻辑：\n1. 检查课程是否存在\n2. 检查课程状态（是否已满、已取消等）\n3. 检查会员是否已报名\n4. 检查剩余座位\n5. 创建报名记录（初始状态为未支付）"
+      },
+      "response": []
+    },
+    {
+      "name": "3. 支付课程报名",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"payMethod\": 1\n}"
+        },
+        "url": {
+          "raw": "{{baseURL}}/api/member/courses/bookings/1/pay",
+          "host": [
+            "{{baseURL}}"
+          ],
+          "path": [
+            "api",
+            "member",
+            "courses",
+            "bookings",
+            "1",
+            "pay"
+          ]
+        },
+        "description": "支付指定的课程报名\n🔐 权限：仅 MEMBER 角色可访问\n\n请求参数：\n- bookingId: 报名记录 ID（路径参数）\n- payMethod: 支付方式（1微信 2支付宝 3现金）\n\n业务逻辑：\n1. 查询报名记录\n2. 校验是否已支付\n3. 更新支付信息\n4. 【关键】课程的 booked_seats +1\n5. 如果报名后已满，更新课程状态为已满（status=0）\n\n✅ 支付成功后会自动在数据库表 courses 中的 booked_seats 字段 +1"
+      },
+      "response": []
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ]
+}

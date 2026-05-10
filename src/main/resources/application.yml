@@ -6,7 +6,7 @@ spring:
     name: gym-management-system
   
   datasource:
-    url: jdbc:mysql://10.208.198.23:3306/gym_management?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://192.168.110.200:3306/gym_management?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: remoteuser
     password: A14279600llh@
     driver-class-name: com.mysql.cj.jdbc.Driver
