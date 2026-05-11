@@ -43,6 +43,7 @@ public class CourseServiceImpl implements CourseService {
     private final CoachRepository coachRepository;
     private final AdminRepository adminRepository;
     private final CourseBookingRepository courseBookingRepository;
+    private final com.gym.management.service.OrderService orderService;
 
     // ================= 辅助方法：获取当前登录管理员信息 =================
 
@@ -605,6 +606,10 @@ public class CourseServiceImpl implements CourseService {
         log.info("创建课程报名记录成功 | bookingNo: {}, courseId: {}, memberId: {}", 
                 bookingNo, course.getId(), memberId);
 
+        // 5.1 【新增】报名并支付成功后生成订单记录
+        orderService.createOrderFromCourseBooking(booking);
+        log.info("订单记录生成成功 | bookingNo: {}, orderId: 已保存", bookingNo);
+
         // 6. 【关键】报名成功后，课程的 booked_seats +1
         course.setBookedSeats(course.getBookedSeats() + 1);
         
@@ -662,6 +667,10 @@ public class CourseServiceImpl implements CourseService {
         booking.setPayMethod(request.getPayMethod());
         booking.setPayTime(LocalDateTime.now());
         courseBookingRepository.save(booking);
+
+        // 4.1 【新增】支付成功后生成订单记录
+        orderService.createOrderFromCourseBooking(booking);
+        log.info("订单记录生成成功 | bookingNo: {}, orderId: 已保存", booking.getBookingNo());
 
         // 5. 【关键】支付成功后，课程的 booked_seats +1
         course.setBookedSeats(course.getBookedSeats() + 1);
